@@ -15,6 +15,8 @@ use reo_common::paths;
 /// Substring Discord scans the process command line for to identify Minecraft.
 const GAME_DETECTION_MARKER: &str = "net.minecraft.client.main.Main";
 
+const LOG4J_CONFIG_ARGUMENT: &str = "-Dlog4j.configurationFile=";
+
 #[allow(clippy::too_many_arguments)]
 pub fn java_arguments(
     arguments: Option<&[Argument]>,
@@ -51,6 +53,13 @@ pub fn java_arguments(
     // so the marker is dropped: the launcher publishes its own presence instead.
     parsed.retain(|arg| !arg.contains(GAME_DETECTION_MARKER));
 
+    // the version's log4j config only reaches the jvm once an install downloaded it
+    parsed.retain(|arg| {
+        arg.strip_prefix(LOG4J_CONFIG_ARGUMENT)
+            .map(Path::new)
+            .is_none_or(|path| !path.is_absolute() || path.is_file())
+    });
+
     if !parsed
         .iter()
         .any(|arg| arg.starts_with("-Djava.library.path="))
@@ -66,6 +75,9 @@ pub fn java_arguments(
         parsed.push("-cp".to_string());
         parsed.push(classpaths.to_string());
     }
+
+    // Log4Shell defence for log4j 2.10+ the downloaded config covers older ones
+    parsed.push("-Dlog4j2.formatMsgNoLookups=true".to_string());
 
     let custom = split_custom_args(&custom_args);
 
@@ -194,12 +206,17 @@ pub fn minecraft_arguments(
 ) -> McResult<Vec<String>> {
     let mut parsed = Vec::new();
 
+    // pre-1.6 clients only read their sounds from the game directory
+    if let Err(err) = crate::install::map_assets_to_resources(asset_index, game_directory) {
+        tracing::warn!("could not copy legacy assets into the game directory: {err}");
+    }
+
     // a legacy version states its arguments as a string and a loader merged onto
     // one adds a list on top the game needs both, in that order
     if let Some(legacy_args) = legacy_args {
-        for arg in legacy_args.split(' ') {
+        for arg in legacy_args.split_whitespace() {
             parsed.push(parse_minecraft_argument(
-                &arg.replace(' ', DUMMY_REPLACE_NEWLINE),
+                arg,
                 access_token,
                 username,
                 uuid,
@@ -210,6 +227,17 @@ pub fn minecraft_arguments(
                 version_type,
                 resolution,
             )?);
+        }
+
+        // these versions predate the has_custom_resolution rule so the size is
+        // appended by hand as the vanilla launcher does
+        if resolution != Resolution::default() {
+            parsed.extend([
+                "--width".to_string(),
+                resolution.width.to_string(),
+                "--height".to_string(),
+                resolution.height.to_string(),
+            ]);
         }
     }
 
@@ -418,14 +446,17 @@ fn legacy_assets_path() -> McResult<String> {
 }
 
 fn parse_java_argument(
-    mut argument: String,
+    argument: String,
     natives_path: &Path,
     libraries_path: &Path,
     classpaths: &str,
     version: &str,
 ) -> McResult<String> {
-    argument.retain(|c| !c.is_whitespace());
+    // `parse_arguments` swaps spaces for the split marker but a jvm argument is
+    // one argv entry (`-Dos.name=Windows 10`) so the spaces go back
+    let argument = argument.replace(DUMMY_REPLACE_NEWLINE, " ");
     Ok(argument
+        .trim()
         .replace(
             "${natives_directory}",
             &polyio::canonicalize(natives_path)?.display().to_string(),
@@ -448,8 +479,8 @@ pub fn classpaths(
     java_arch: &str,
     updated: bool,
 ) -> McResult<String> {
-    let mut chosen: HashMap<String, (ClasspathRank, &str)> = HashMap::new();
-    for lib in libraries {
+    let mut chosen: HashMap<String, (ClasspathRank, usize)> = HashMap::new();
+    for (index, lib) in libraries.iter().enumerate() {
         if let Some(rules) = &lib.rules
             && !validate_rules(rules, java_arch, updated)
         {
@@ -469,32 +500,41 @@ pub fn classpaths(
         let rank = (!bundled, version_key(version));
 
         match chosen.get(&slot) {
-            Some((existing, existing_name)) if *existing >= rank => {
+            Some((existing, kept)) if *existing >= rank => {
                 tracing::debug!(
                     skipped = %lib.name,
-                    kept = %existing_name,
+                    kept = %libraries[*kept].name,
                     "classpath: dropping superseded library"
                 );
             }
             _ => {
-                chosen.insert(slot, (rank, &lib.name));
+                chosen.insert(slot, (rank, index));
             }
         }
     }
 
-    let mut classpaths = chosen
-        .values()
-        .map(|(_, name)| get_library(libraries_path, name, false))
-        .collect::<Result<HashSet<_>, _>>()?;
+    // manifest order so legacy launchwrapper versions see the same classpath
+    // every launch
+    let mut winners: Vec<usize> = chosen.into_values().map(|(_, index)| index).collect();
+    winners.sort_unstable();
 
-    classpaths.insert(polyio::canonicalize(client_path)?.display().to_string());
+    let mut seen = HashSet::new();
+    let mut classpaths = Vec::with_capacity(winners.len() + 1);
+    for index in winners {
+        let path = get_library(libraries_path, &libraries[index].name, false)?;
+        if seen.insert(path.clone()) {
+            classpaths.push(path);
+        }
+    }
+
+    // the client jar goes last as in the vanilla launcher
+    let client = polyio::canonicalize(client_path)?.display().to_string();
+    classpaths.retain(|path| *path != client);
+    classpaths.push(client);
 
     tracing::debug!(entries = classpaths.len(), "classpath resolved");
 
-    Ok(classpaths
-        .into_iter()
-        .collect::<Vec<_>>()
-        .join(constants::CLASSPATH_SEPARATOR))
+    Ok(classpaths.join(constants::CLASSPATH_SEPARATOR))
 }
 
 type ClasspathRank = (bool, Vec<u64>);
@@ -606,9 +646,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        HashMap, Library, Path, SidedDataEntry, ZGC_MIN_HEAP_MB, append_profile_game_arguments,
-        classpaths, drop_repeated_arguments, get_library, is_collector_flag, java_arguments,
-        minecraft_arguments, performance_flags, processor_arguments, split_custom_args,
+        Argument, HashMap, Library, Path, SidedDataEntry, ZGC_MIN_HEAP_MB,
+        append_profile_game_arguments, classpaths, drop_repeated_arguments, get_library,
+        is_collector_flag, java_arguments, minecraft_arguments, performance_flags,
+        processor_arguments, split_custom_args,
     };
     use reo_common::Resolution;
 
@@ -1195,6 +1236,159 @@ mod tests {
         assert_eq!(args.iter().filter(|a| *a == "--gameDir").count(), 1);
         assert_eq!(args.iter().filter(|a| *a == "--username").count(), 1);
         assert_eq!(args.iter().filter(|a| *a == "--tweakClass").count(), 1);
+        assert!(
+            !args.iter().any(String::is_empty),
+            "repeated spaces must not become empty arguments: {args:?}"
+        );
+    }
+
+    fn legacy_args(resolution: Resolution) -> Vec<String> {
+        let dir = std::env::temp_dir();
+        minecraft_arguments(
+            None,
+            Some("--username ${auth_player_name} --gameDir ${game_directory}"),
+            "token",
+            "player",
+            uuid::Uuid::nil(),
+            "1.8.9",
+            "1.8",
+            &dir,
+            &dir,
+            interfrost::api::minecraft::VersionType::Release,
+            resolution,
+            "x86_64",
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn a_legacy_version_gets_the_custom_resolution() {
+        let args = legacy_args(Resolution::new(1920, 1080));
+
+        let width = args.iter().position(|a| a == "--width").expect("no width");
+        let height = args.iter().position(|a| a == "--height").expect("no height");
+        assert_eq!(args[width + 1], "1920");
+        assert_eq!(args[height + 1], "1080");
+    }
+
+    #[test]
+    fn a_legacy_version_keeps_its_own_size_by_default() {
+        let args = legacy_args(Resolution::default());
+
+        assert!(!args.iter().any(|a| a == "--width" || a == "--height"));
+    }
+
+    #[test]
+    fn a_jvm_argument_keeps_its_inner_spaces() {
+        let jvm: Vec<interfrost::api::minecraft::Argument> = serde_json::from_str(
+            r#"[" -Dlauncher.brand=Reo Launcher ",
+                {"rules": [], "value": ["-Dos.name=Windows 10", "-Dos.version=10.0"]}]"#,
+        )
+        .unwrap();
+        let natives = std::env::temp_dir();
+
+        let args = java_arguments(
+            Some(&jvm),
+            &natives,
+            &natives,
+            "/libs/client.jar",
+            "1.21.1",
+            2048,
+            String::new(),
+            "x86_64",
+            21,
+        )
+        .unwrap();
+
+        assert!(args.contains(&"-Dlauncher.brand=Reo Launcher".to_string()), "{args:?}");
+        assert!(args.contains(&"-Dos.name=Windows 10".to_string()), "{args:?}");
+        assert!(args.contains(&"-Dos.version=10.0".to_string()), "{args:?}");
+    }
+
+    #[test]
+    fn the_log4j_config_is_only_passed_once_it_is_on_disk() {
+        let dir = std::env::temp_dir().join("oneclient log4j config");
+        std::fs::create_dir_all(&dir).unwrap();
+        let present = dir.join("client-1.12.xml");
+        std::fs::write(&present, b"<Configuration/>").unwrap();
+        let missing = dir.join("client-1.7.xml");
+        let _ = std::fs::remove_file(&missing);
+
+        let jvm = [&present, &missing]
+            .map(|path| {
+                Argument::Normal(format!("-Dlog4j.configurationFile={}", path.display()))
+            })
+            .to_vec();
+
+        let args = java_arguments(
+            Some(&jvm),
+            &dir,
+            &dir,
+            "/libs/client.jar",
+            "1.12.2",
+            2048,
+            String::new(),
+            "x86_64",
+            8,
+        )
+        .unwrap();
+
+        assert!(
+            args.contains(&format!("-Dlog4j.configurationFile={}", present.display())),
+            "{args:?}"
+        );
+        assert!(
+            !args.iter().any(|a| a.contains("client-1.7.xml")),
+            "a config that never downloaded must not reach the jvm: {args:?}"
+        );
+        assert!(args.contains(&"-Dlog4j2.formatMsgNoLookups=true".to_string()));
+    }
+
+    #[test]
+    fn the_classpath_follows_the_manifest_with_the_client_last() {
+        let libraries: Vec<Library> = serde_json::from_str(
+            r#"[
+                { "name": "net.minecraft:launchwrapper:1.12" },
+                { "name": "org.lwjgl.lwjgl:lwjgl:2.9.4" },
+                { "name": "com.google.guava:guava:17.0" },
+                { "name": "org.lwjgl.lwjgl:lwjgl:2.9.4" },
+                { "name": "net.sf.jopt-simple:jopt-simple:4.6" }
+            ]"#,
+        )
+        .unwrap();
+
+        let (dir, client) = install_jars(
+            "oneclient-classpath-order",
+            &[
+                "net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar",
+                "org/lwjgl/lwjgl/lwjgl/2.9.4/lwjgl-2.9.4.jar",
+                "com/google/guava/guava/17.0/guava-17.0.jar",
+                "net/sf/jopt-simple/jopt-simple/4.6/jopt-simple-4.6.jar",
+            ],
+        );
+
+        let cp = classpaths(&dir, &libraries, &client, "x86_64", false).unwrap();
+        let entries: Vec<String> = cp
+            .split(reo_common::constants::CLASSPATH_SEPARATOR)
+            .map(|entry| {
+                Path::new(entry)
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+
+        assert_eq!(
+            entries,
+            vec![
+                "launchwrapper-1.12.jar",
+                "lwjgl-2.9.4.jar",
+                "guava-17.0.jar",
+                "jopt-simple-4.6.jar",
+                "client.jar",
+            ]
+        );
     }
 
     #[test]
