@@ -157,6 +157,12 @@ jobs:
             formats: nsis
 
     runs-on: ${{ matrix.platform }}
+    env:
+      # Code signing is optional: each signing step only runs when its secrets are
+      # set, so a release still builds without a SignPath or Apple developer account
+      # (the installers are then unsigned and the OS warns when opening them).
+      SIGNPATH_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' && secrets.SIGNPATH_ORGANIZATION_ID != '' }}
+      APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE != '' }}
     steps:
       # Pin to the commit `prepare` resolved - after a release that is the version
       # commit it just pushed, which github.sha would not point at.
@@ -194,8 +200,12 @@ jobs:
           tool: cargo-packager
           version: 0.11.8
 
+      - name: (macOS) Note unsigned build
+        if: startsWith(matrix.platform, 'macos') && env.APPLE_SIGNING_ENABLED != 'true'
+        run: echo "::warning::APPLE_CERTIFICATE is not set; the macOS app is not signed or notarized and Gatekeeper will ask users to allow it in Privacy & Security."
+
       - name: Import Apple Developer certificate
-        if: startsWith(matrix.platform, 'macos')
+        if: startsWith(matrix.platform, 'macos') && env.APPLE_SIGNING_ENABLED == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -252,8 +262,13 @@ jobs:
             exit 1
           fi
 
+      - name: (Windows) Note unsigned build
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED != 'true'
+        shell: bash
+        run: echo "::warning::SIGNPATH_API_TOKEN / SIGNPATH_ORGANIZATION_ID are not set; the Windows app and installer carry no Authenticode signature and SmartScreen will warn."
+
       - name: (Windows) Upload unsigned app binary artifact
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         id: win_upload_unsigned_bin
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -261,7 +276,7 @@ jobs:
           path: target/release/reo_app.exe
 
       - name: (Windows) Submit SignPath signing request for app binary
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         uses: signpath/github-action-submit-signing-request@ced31329c0317e779dad2eec2a7c3bb46ea1343e # v1.3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -277,7 +292,7 @@ jobs:
           output-artifact-directory: signed-bin
 
       - name: (Windows) Swap in signed app binary
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -290,7 +305,7 @@ jobs:
           cp "$signed" target/release/reo_app.exe
 
       - name: (Windows) Verify app binary is signed
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         shell: pwsh
         run: |
           $sig = Get-AuthenticodeSignature 'target/release/reo_app.exe'
@@ -353,6 +368,15 @@ jobs:
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
         run: |
+          # Without the key no .sig is produced and the launcher could never verify this update
+          if [ -z "${CARGO_PACKAGER_SIGN_PRIVATE_KEY:-}" ] || [ -z "${CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD:-}" ]; then
+            echo "::error::CARGO_PACKAGER_SIGN_PRIVATE_KEY and CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD secrets are required to sign updates."
+            exit 1
+          fi
+          # Notarization needs all three, so empty values are dropped rather than tried
+          if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_PASSWORD:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
+            unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+          fi
           ARGS="--release --formats ${{ matrix.formats }}"
           if [ -n "${{ matrix.target }}" ]; then
             ARGS="$ARGS --target ${{ matrix.target }}"
@@ -448,7 +472,7 @@ jobs:
           Write-Host "OK: $($(Get-ChildItem 'target/crt/*.dll').Count) CRT DLLs sit beside reo_app.exe"
 
       - name: (Windows) Upload unsigned installer artifact
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         id: win_upload_unsigned
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -456,7 +480,7 @@ jobs:
           path: ${{ steps.win_installer.outputs.path }}
 
       - name: (Windows) Submit SignPath signing request
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         uses: signpath/github-action-submit-signing-request@ced31329c0317e779dad2eec2a7c3bb46ea1343e # v1.3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -472,7 +496,7 @@ jobs:
           output-artifact-directory: signed
 
       - name: (Windows) Replace installer with signed one + recompute updater sig
-        if: matrix.platform == 'windows-latest'
+        if: matrix.platform == 'windows-latest' && env.SIGNPATH_ENABLED == 'true'
         shell: bash
         env:
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
@@ -581,6 +605,8 @@ jobs:
 
   manifest:
     needs: [prepare, package]
+    # One platform failing to build must not hold back the update for the others
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -602,6 +628,8 @@ jobs:
           for path in glob.glob("fragments/*.json"):
               with open(path) as f:
                   platforms.update(json.load(f))
+          if not platforms:
+              raise SystemExit("::error::No platform built an updater artifact, so there is no latest.json to publish")
           manifest = {
               "version": os.environ["VERSION"],
               "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
