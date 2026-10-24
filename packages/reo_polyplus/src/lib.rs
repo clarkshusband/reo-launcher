@@ -158,11 +158,22 @@ async fn session(auth: &reo_auth::AuthService, client: &reqwest::Client) -> Outc
 async fn current_account(
     auth: &reo_auth::AuthService,
 ) -> Result<Option<MinecraftAccount>, PlusError> {
+    // A signed-out account comes back with a cleared token that Mojang would
+    // reject on every retry until the user signs in again
+    // Checked offline first so the wait does not go through the launch path
+    if auth
+        .default_account()
+        .await?
+        .is_some_and(|account| account.needs_sign_in())
+    {
+        return Ok(None);
+    }
+
     let Some(account) = auth.default_account_for_launch().await? else {
         return Ok(None);
     };
 
-    Ok(account.is_microsoft().then_some(account))
+    Ok((account.is_microsoft() && !account.needs_sign_in()).then_some(account))
 }
 
 async fn run_session(

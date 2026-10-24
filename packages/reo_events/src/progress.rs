@@ -137,6 +137,27 @@ struct ChildInner {
     finished: Arc<std::sync::atomic::AtomicBool>,
 }
 
+impl ChildInner {
+    fn finish(&self) {
+        if self.finished.swap(true, Ordering::Relaxed) {
+            return;
+        }
+
+        self.events.emit(GroupedProgressEvent::FinishChild {
+            session_id: self.session_id,
+            child_id: self.child_id,
+        });
+    }
+}
+
+/// Runs once the last handle is gone so two clones dropping at the same time
+/// cannot both decide the other one is still alive
+impl Drop for ChildInner {
+    fn drop(&mut self) {
+        self.finish();
+    }
+}
+
 #[derive(Clone)]
 pub struct GroupedProgressSession {
     inner: Arc<SessionInner>,
@@ -285,29 +306,10 @@ impl GroupedProgressChild {
         });
     }
 
+    /// Dropping the last handle does the same clones are handed around
+    /// routinely so finishing on any clone's drop would end the task early
     pub fn finish(&self) {
-        if self
-            .inner
-            .finished
-            .swap(true, std::sync::atomic::Ordering::Relaxed)
-        {
-            return;
-        }
-
-        self.inner.events.emit(GroupedProgressEvent::FinishChild {
-            session_id: self.inner.session_id,
-            child_id: self.inner.child_id,
-        });
-    }
-}
-
-impl Drop for GroupedProgressChild {
-    /// Only the *last* handle finishes the task clones are handed around
-    /// routinely and finishing on any clone's drop would end the task early
-    fn drop(&mut self) {
-        if Arc::strong_count(&self.inner) == 1 {
-            self.finish();
-        }
+        self.inner.finish();
     }
 }
 
@@ -381,6 +383,31 @@ mod tests {
 
         drop(child);
         assert!(!has_finish(&drain(&mut rx)), "drop must not finish twice");
+    }
+
+    #[test]
+    fn clones_dropped_on_several_threads_finish_exactly_once() {
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let events = EventBus::new(tx);
+        let session = GroupedProgressSession::start(&events, "test");
+        let child = session.child("file", 100, TaskCategory::Assets);
+        let _ = drain(&mut rx);
+
+        let clones: Vec<_> = (0..8).map(|_| child.clone()).collect();
+        drop(child);
+        std::thread::scope(|scope| {
+            for clone in clones {
+                scope.spawn(move || drop(clone));
+            }
+        });
+
+        assert_eq!(
+            drain(&mut rx)
+                .iter()
+                .filter(|e| matches!(e, GroupedProgressEvent::FinishChild { .. }))
+                .count(),
+            1
+        );
     }
 
     #[test]

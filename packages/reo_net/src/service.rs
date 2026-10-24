@@ -15,6 +15,13 @@ const MAX_THROTTLE_RETRIES: u32 = 6;
 
 const MAX_INFLIGHT_REQUESTS: usize = 64;
 
+/// Caps a whole JSON or metadata exchange
+/// The client itself has none since it would also cut off a large download on
+/// a slow link which the read timeout already guards against stalling
+pub(crate) const API_REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_mins(5);
+
+const CURSEFORGE_API_HOST: &str = "api.curseforge.com";
+
 fn retry_after(response: &Response) -> Option<std::time::Duration> {
     let raw = response
         .headers()
@@ -38,19 +45,39 @@ fn backoff_delay(attempt: u32) -> std::time::Duration {
     std::time::Duration::from_millis(capped + jitter)
 }
 
-fn is_curseforge_host(url: &reqwest::Url) -> bool {
+/// The key belongs to the API alone the CDN and website never need it
+fn is_curseforge_api(url: &reqwest::Url) -> bool {
     if url.scheme() != "https" {
         return false;
     }
 
-    let Some(host) = url.host_str() else {
-        return false;
-    };
-    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    url.host_str().is_some_and(|host| {
+        host.trim_end_matches('.')
+            .eq_ignore_ascii_case(CURSEFORGE_API_HOST)
+    })
+}
 
-    matches!(host.as_str(), "curseforge.com" | "forgecdn.net")
-        || host.ends_with(".curseforge.com")
-        || host.ends_with(".forgecdn.net")
+/// reqwest only strips its own sensitive headers on a cross-host redirect so
+/// the key would follow one anywhere
+fn redirect_leaks_curseforge_key(previous: &[reqwest::Url], next: &reqwest::Url) -> bool {
+    previous.first().is_some_and(is_curseforge_api) && !is_curseforge_api(next)
+}
+
+/// Stops rather than follows so the caller sees the redirect as a failed status
+fn redirect_policy() -> reqwest::redirect::Policy {
+    let fallback = reqwest::redirect::Policy::default();
+
+    reqwest::redirect::Policy::custom(move |attempt| {
+        if redirect_leaks_curseforge_key(attempt.previous(), attempt.url()) {
+            tracing::warn!(
+                next = %attempt.url(),
+                "not following a CurseForge API redirect off the API host"
+            );
+            attempt.stop()
+        } else {
+            fallback.redirect(attempt)
+        }
+    })
 }
 
 fn apply_curseforge_auth(
@@ -60,7 +87,7 @@ fn apply_curseforge_auth(
     const API_KEY_HEADER: reqwest::header::HeaderName =
         reqwest::header::HeaderName::from_static("x-api-key");
 
-    if !is_curseforge_host(request.url()) {
+    if !is_curseforge_api(request.url()) {
         return Ok(());
     }
 
@@ -104,7 +131,7 @@ impl RequestClient {
         let mut builder = ClientBuilder::new()
             .connect_timeout(std::time::Duration::from_secs(10))
             .read_timeout(std::time::Duration::from_secs(30))
-            .timeout(std::time::Duration::from_mins(10))
+            .redirect(redirect_policy())
             .tls_backend_rustls()
             .user_agent(format!(
                 "Reo Launcher {} ({})",
@@ -247,6 +274,11 @@ impl RequestClient {
         &self,
         request: impl Into<HttpRequest>,
     ) -> Result<T, RequestError> {
+        let mut request: HttpRequest = request.into();
+        if request.request.timeout().is_none() {
+            *request.request.timeout_mut() = Some(API_REQUEST_TIMEOUT);
+        }
+
         let res = self.send(request).await?;
         let status = res.status();
         let url = res.url().to_string();
@@ -315,13 +347,10 @@ mod tests {
     }
 
     #[test]
-    fn attaches_key_to_curseforge_api_and_cdn() {
+    fn attaches_key_to_the_curseforge_api() {
         for url in [
             "https://api.curseforge.com/v1/mods/search",
-            "https://media.forgecdn.net/avatars/1/2/icon.png",
-            "https://edge.forgecdn.net/files/1/2/mod.jar",
-            "https://www.curseforge.com/minecraft",
-            "https://forgecdn.net/thing",
+            "https://API.curseforge.com./v1/mods/1",
         ] {
             assert_eq!(
                 api_key_of(url).as_deref(),
@@ -338,10 +367,33 @@ mod tests {
             "https://cdn.modrinth.com/data/x/y.jar",
             "https://notcurseforge.com/x",
             "https://evil-forgecdn.net.attacker.com/x",
-            "http://media.forgecdn.net/insecure.png",
+            "https://api.curseforge.com.attacker.com/x",
+            "http://api.curseforge.com/v1/mods",
+            "https://media.forgecdn.net/avatars/1/2/icon.png",
+            "https://edge.forgecdn.net/files/1/2/mod.jar",
+            "https://www.curseforge.com/minecraft",
         ] {
             assert_eq!(api_key_of(url), None, "unexpected key on {url}");
         }
+    }
+
+    #[test]
+    fn a_keyed_request_is_not_redirected_off_the_api_host() {
+        let parsed = |url: &str| -> reqwest::Url { url.parse().unwrap() };
+        let api = [parsed("https://api.curseforge.com/v1/mods/1/files/2/download-url")];
+
+        assert!(redirect_leaks_curseforge_key(
+            &api,
+            &parsed("https://edge.forgecdn.net/files/1/2/mod.jar")
+        ));
+        assert!(!redirect_leaks_curseforge_key(
+            &api,
+            &parsed("https://api.curseforge.com/v1/mods/1")
+        ));
+        assert!(!redirect_leaks_curseforge_key(
+            &[parsed("https://www.curseforge.com/api/v1/mods/1/files/2/download")],
+            &parsed("https://edge.forgecdn.net/files/1/2/mod.jar")
+        ));
     }
 
     #[test]

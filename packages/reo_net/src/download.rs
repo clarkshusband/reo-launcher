@@ -43,8 +43,9 @@ pub async fn matches_on_disk(path: &Path, expected_sha1: &str) -> bool {
     }
 }
 
-/// `dest` is only created once the hash matches so a failed attempt leaves
-/// nothing behind for a later `exists()` check to trip over
+/// `dest` is only created or replaced once the hash matches so a failed
+/// attempt leaves nothing behind for a later `exists()` check to trip over
+/// and never costs an existing good file
 #[tracing::instrument(level = "debug", skip(client, events, notify), fields(%url))]
 pub async fn download_verified(
     client: &RequestClient,
@@ -146,7 +147,7 @@ async fn download_attempt(
 
     let mut hasher = expected.map(|expected| ChecksumStream::new(expected.algorithm));
     let mut received = 0u64;
-    {
+    let staged = {
         let stream = futures_lite::StreamExt::map(stream, |item| {
             if let Ok(chunk) = &item {
                 received += chunk.len() as u64;
@@ -157,9 +158,10 @@ async fn download_attempt(
             item
         });
         let stream = std::pin::pin!(stream);
-        // Writes to a scratch sibling and renames so `dest` is never truncated
-        polyio::write_stream(dest, stream, Some(total)).await?;
-    }
+        // Held in a scratch sibling until it checks out so `dest` is never
+        // truncated or replaced by bad bytes
+        polyio::write_stream_staged(dest, stream, Some(total)).await?
+    };
 
     if let (Some(expected), Some(hasher)) = (expected, hasher) {
         if let Some(child) = child {
@@ -168,8 +170,7 @@ async fn download_attempt(
 
         let actual = hasher.finish();
         if !expected.matches(&actual) {
-            // Remove it rather than leave it for the next `exists()` check
-            let _ = polyio::remove_file(dest).await;
+            staged.discard().await;
             return Err(RequestError::HashMismatch {
                 source_desc: dest.display().to_string(),
                 expected: format!("{} {}", expected.algorithm.name(), expected.hex),
@@ -180,13 +181,15 @@ async fn download_attempt(
         && received != declared
     {
         // With no hash the byte count is the only evidence the transfer finished
-        let _ = polyio::remove_file(dest).await;
+        staged.discard().await;
         return Err(RequestError::IncompleteBody {
             source_desc: dest.display().to_string(),
             expected: declared,
             actual: received,
         });
     }
+
+    staged.commit().await?;
 
     Ok(())
 }
@@ -199,11 +202,57 @@ pub async fn fetch_verified(
     expected_sha1: &str,
     progress: Option<GroupedProgressChild>,
 ) -> Result<Vec<u8>, RequestError> {
+    let mut attempt = 1;
+    let bytes = loop {
+        match fetch_attempt(client, events, url, expected_sha1, progress.as_ref()).await {
+            Ok(bytes) => break bytes,
+            Err(err) if attempt < MAX_DOWNLOAD_ATTEMPTS && worth_retrying(&err) => {
+                tracing::warn!(
+                    attempt,
+                    %url,
+                    "fetch failed, retrying: {err}"
+                );
+                tokio::time::sleep(retry_delay(attempt)).await;
+                attempt += 1;
+            }
+            Err(err) => return Err(err),
+        }
+    };
+
+    if let Some(child) = progress {
+        child.finish();
+    }
+
+    Ok(bytes)
+}
+
+async fn fetch_attempt(
+    client: &RequestClient,
+    events: &EventBus,
+    url: &str,
+    expected_sha1: &str,
+    progress: Option<&GroupedProgressChild>,
+) -> Result<Vec<u8>, RequestError> {
+    if let Some(child) = progress {
+        child.set_phase(TaskPhase::Downloading);
+    }
+
     let request = reqwest::Request::new(Method::GET, url.parse()?);
     let response = client.send(request).await?;
 
+    // Otherwise an error page surfaces as a misleading hash mismatch
+    let status = response.status();
+    if !status.is_success() {
+        let bytes = response.bytes().await?;
+        return Err(RequestError::HttpStatus {
+            status: status.as_u16(),
+            url: url.to_string(),
+            snippet: crate::error::body_snippet(&bytes),
+        });
+    }
+
     let options = ResponseOptions {
-        notify: progress.clone().map(ResponseNotifyOptions::grouped),
+        notify: progress.cloned().map(ResponseNotifyOptions::grouped),
     };
     let stream = response.stream(options, events).await?;
 
@@ -214,7 +263,7 @@ pub async fn fetch_verified(
         bytes.extend_from_slice(&chunk?);
     }
 
-    if let Some(child) = &progress {
+    if let Some(child) = progress {
         child.set_phase(TaskPhase::Verifying);
     }
 
@@ -225,10 +274,6 @@ pub async fn fetch_verified(
             expected: expected_sha1.to_string(),
             actual,
         });
-    }
-
-    if let Some(child) = progress {
-        child.finish();
     }
 
     Ok(bytes)

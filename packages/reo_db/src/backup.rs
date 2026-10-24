@@ -95,10 +95,16 @@ pub fn set_aside(database_path: &Path) -> Result<Option<PathBuf>, DbError> {
     ));
     std::fs::rename(database_path, &target)?;
 
+    // The WAL can hold committed pages not yet checkpointed into the main file
+    // so the sidecars travel with it under the same suffixes SQLite looks for
     for suffix in SIDECARS {
-        let sidecar = sidecar(database_path, suffix);
-        if sidecar.exists() {
-            let _ = std::fs::remove_file(sidecar);
+        let sidecar_path = sidecar(database_path, suffix);
+        if sidecar_path.exists()
+            && let Err(err) = std::fs::rename(&sidecar_path, sidecar(&target, suffix))
+        {
+            // Left in place it would be replayed into whatever database comes next
+            tracing::warn!(path = %sidecar_path.display(), %err, "could not move a database sidecar aside");
+            let _ = std::fs::remove_file(&sidecar_path);
         }
     }
 
@@ -228,6 +234,22 @@ mod tests {
 
         assert!(!db.exists());
         assert!(moved.exists());
+    }
+
+    #[tokio::test]
+    async fn setting_aside_moves_the_sidecars_with_the_database() {
+        let dir = TempDir::new().await.expect("tempdir");
+        let db = dir.dir_path().join("user_data.db");
+        std::fs::write(&db, b"main").expect("write");
+        std::fs::write(sidecar(&db, "-wal"), b"uncheckpointed").expect("write");
+
+        let moved = set_aside(&db).expect("set aside").expect("moved");
+
+        assert!(!sidecar(&db, "-wal").exists());
+        assert_eq!(
+            std::fs::read(sidecar(&moved, "-wal")).expect("moved wal"),
+            b"uncheckpointed"
+        );
     }
 
     #[tokio::test]
