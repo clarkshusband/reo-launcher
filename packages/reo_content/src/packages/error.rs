@@ -31,6 +31,10 @@ pub enum PackageError {
     ProviderNotRegistered(ProviderId),
     #[error("invalid local file: {0}")]
     InvalidLocalFile(String),
+    #[error(
+        "the author of {file_name} has disabled third-party downloads, download it manually from CurseForge: {page_url}"
+    )]
+    DownloadBlocked { file_name: String, page_url: String },
 }
 
 pub type PackageResult<T> = Result<T, PackageError>;

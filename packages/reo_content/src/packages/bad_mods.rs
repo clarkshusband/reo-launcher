@@ -422,7 +422,9 @@ async fn with_newest_version(
     ctx: &ContentCtx,
 ) -> ResolvedAlternative {
     let picked = match ctx.providers.get(provider_id) {
-        Ok(provider) => pick_version(provider, &project.id, cluster, ctx).await,
+        Ok(provider) => {
+            pick_version(provider, &project.id, Some(project.content_type), cluster, ctx).await
+        }
         Err(err) => Err(err),
     };
 

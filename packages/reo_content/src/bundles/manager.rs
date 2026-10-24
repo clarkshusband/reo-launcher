@@ -117,6 +117,8 @@ impl BundlesManager {
                 );
             }
         }
+        // A reader while the archives downloaded cached the old ones
+        self.archive_cache.write().await.clear();
 
         if synced_all {
             if let Some(etag) = etag {
@@ -150,8 +152,16 @@ impl BundlesManager {
     ) -> ContentResult<Vec<BundleArchive>> {
         let mut archives = Vec::new();
         for bundle in self.list_for(ctx, mc_version, loader).await? {
-            let manifest = self.manifest_for_archive(ctx, &bundle.path).await?;
-            archives.push(BundleArchive { bundle, manifest });
+            // One unreadable archive must not hide every other bundle
+            let read = self.manifest_for_archive(ctx, &bundle.path).await;
+            match read {
+                Ok(manifest) => archives.push(BundleArchive { bundle, manifest }),
+                Err(err) => tracing::warn!(
+                    path = %bundle.path.display(),
+                    error = %err,
+                    "skipping a bundle archive that could not be read"
+                ),
+            }
         }
         Ok(archives)
     }

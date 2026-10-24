@@ -556,13 +556,22 @@ pub async fn install_enabled_bundle_files(
     progress: Option<&GroupedProgressSession>,
     ctx: &ContentCtx,
 ) -> ContentResult<Vec<String>> {
-    if taken {
-        extract_bundle_overrides_for_cluster(archive, cluster_id, ctx).await?;
+    let bundle_name = archive.manifest.name.clone();
+    // Reported together once everything else has been tried
+    let mut failed = Vec::new();
+
+    if taken
+        && let Err(err) = extract_bundle_overrides_for_cluster(archive, cluster_id, ctx).await
+    {
+        tracing::warn!(bundle = %bundle_name, error = %err, "failed to extract bundle overrides");
+        failed.push(format!("{bundle_name} overrides"));
     }
-    heal_bundle_activity(cluster_id, std::slice::from_ref(archive), ctx).await?;
+    if let Err(err) = heal_bundle_activity(cluster_id, std::slice::from_ref(archive), ctx).await {
+        tracing::warn!(bundle = %bundle_name, error = %err, "failed to repair bundle content");
+        failed.push(bundle_name.clone());
+    }
 
     let overrides = bundle_dao::list_overrides(&ctx.db, cluster_id).await?;
-    let bundle_name = archive.manifest.name.clone();
     let mut installed = Vec::new();
 
     // "Already installed" means the database not disk
@@ -607,10 +616,17 @@ pub async fn install_enabled_bundle_files(
             Ok(hash) => installed.push(hash),
             Err(err) => {
                 tracing::warn!(file = %file.display_name(), error = %err, "failed to install bundle file");
+                // An optional mod the user opted into does not leave the bundle broken
+                if file.enabled {
+                    failed.push(file.display_name());
+                }
             }
         }
     }
 
+    if !failed.is_empty() {
+        return Err(BundleError::Incomplete(failed).into());
+    }
     Ok(installed)
 }
 
@@ -922,18 +938,28 @@ pub async fn install_cluster_bundles(
         "installing enabled bundle content"
     );
     let accepted = accepted_bundles(cluster_id, ctx).await?;
+    // One bundle failing must not leave the ones after it unprovisioned
+    let mut failed = Vec::new();
     for archive in &archives {
         let taken = takes_bundle(archive, &accepted);
-        let installed =
-            install_enabled_bundle_files(archive, cluster_id, taken, true, progress, ctx).await?;
-        tracing::info!(
-            cluster_id,
-            bundle = %archive.manifest.name,
-            installed = installed.len(),
-            "installed bundle files"
-        );
+        match install_enabled_bundle_files(archive, cluster_id, taken, true, progress, ctx).await {
+            Ok(installed) => tracing::info!(
+                cluster_id,
+                bundle = %archive.manifest.name,
+                installed = installed.len(),
+                "installed bundle files"
+            ),
+            Err(ContentError::Bundle(BundleError::Incomplete(names))) => failed.extend(names),
+            Err(err) => {
+                tracing::warn!(cluster_id, bundle = %archive.manifest.name, error = %err, "failed to install bundle");
+                failed.push(archive.manifest.name.clone());
+            }
+        }
     }
 
+    if !failed.is_empty() {
+        return Err(BundleError::Incomplete(failed).into());
+    }
     Ok(())
 }
 

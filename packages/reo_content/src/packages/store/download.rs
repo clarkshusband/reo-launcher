@@ -3,7 +3,8 @@ use reo_db::models::ArtifactRow;
 
 use super::paths::{artifact_absolute_path, cache_file_path, relative_cache_path};
 use crate::ctx::ContentCtx;
-use crate::error::ContentResult;
+use crate::error::{ContentError, ContentResult};
+use crate::packages::PackageError;
 use crate::packages::types::{ExternalFile, VersionDetail, VersionFile};
 use reo_common::domain::{ContentType, ProviderId};
 use reo_events::GroupedProgressChild;
@@ -63,13 +64,29 @@ pub async fn download_version_file(
         }
     }
 
-    let dest = cache_file_path(
+    let mut dest = cache_file_path(
         content_type,
         provider,
         project_id,
         &version.version_id,
         &file.file_name,
     )?;
+
+    let refreshed;
+    let (version, file) = if file.url.is_empty() && !reo_net::matches_on_disk(&dest, &hash).await
+    {
+        refreshed = refetch_download(provider, project_id, version, file, &hash, ctx).await?;
+        dest = cache_file_path(
+            content_type,
+            provider,
+            project_id,
+            &refreshed.0.version_id,
+            &refreshed.1.file_name,
+        )?;
+        (&refreshed.0, &refreshed.1)
+    } else {
+        (version, file)
+    };
 
     let size = ensure_artifact_file(&hash, &file.url, &dest, child, ctx).await?;
     let stored_path = relative_cache_path(&dest)?;
@@ -103,6 +120,46 @@ pub async fn download_version_file(
     Ok(row)
 }
 
+/// A release rebuilt from the cache keeps no download link so the provider is asked
+/// again
+/// CurseForge sends none for files whose author turned off third-party downloads
+async fn refetch_download(
+    provider: ProviderId,
+    project_id: &str,
+    version: &VersionDetail,
+    file: &VersionFile,
+    hash: &str,
+    ctx: &ContentCtx,
+) -> ContentResult<(VersionDetail, VersionFile)> {
+    let fresh = ctx
+        .providers
+        .get(provider)?
+        .get_version(project_id, &version.version_id, ctx)
+        .await?;
+
+    // Pinned by hash another file of the same version would change what is installed
+    let found = fresh
+        .files
+        .iter()
+        .find(|candidate| normalize_hash(&candidate.sha1) == hash)
+        .cloned();
+
+    match found {
+        Some(found) if !found.url.is_empty() => Ok((fresh, found)),
+        Some(_) if provider == ProviderId::CurseForge => Err(PackageError::DownloadBlocked {
+            file_name: file.file_name.clone(),
+            page_url: format!("https://www.curseforge.com/projects/{project_id}"),
+        }
+        .into()),
+        Some(_) => Err(ContentError::InvalidData {
+            reason: format!("{} has no download link on {provider:?}", file.file_name),
+        }),
+        None => Err(ContentError::InvalidData {
+            reason: format!("{} is no longer served by {provider:?}", file.file_name),
+        }),
+    }
+}
+
 #[tracing::instrument(level = "debug", skip(file, child, ctx), fields(name = %file.name))]
 pub async fn download_external(
     file: &ExternalFile,
@@ -122,7 +179,7 @@ pub async fn download_external(
         file.content_type,
         ProviderId::Local,
         "external",
-        &hash[..hash.len().min(16)],
+        hash.get(..16).unwrap_or(&hash),
         &file.name,
     )?;
     let size = ensure_artifact_file(&hash, &file.url, &dest, child, ctx).await?;

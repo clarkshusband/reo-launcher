@@ -280,8 +280,15 @@ impl PackageProvider for ModrinthProvider {
                 .append_pair("game_versions", &format!("[\"{v}\"]"));
         }
         if let Some(loader) = loader {
-            url.query_pairs_mut()
-                .append_pair("loaders", &format!("[\"{}\"]", loader.modrinth_name()));
+            let mut loaders = vec![loader.modrinth_name()];
+            // Quilt runs Fabric mods
+            if loader == GameLoader::Quilt {
+                loaders.push(GameLoader::Fabric.modrinth_name());
+            }
+            url.query_pairs_mut().append_pair(
+                "loaders",
+                &serde_json::to_string(&loaders).unwrap_or_default(),
+            );
         }
 
         let versions: Vec<ModrinthVersion> =

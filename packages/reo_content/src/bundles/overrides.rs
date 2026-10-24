@@ -261,6 +261,12 @@ pub(crate) async fn sync_layered_overrides(
     Ok(report)
 }
 
+/// The hashes the last [`sync_file_lock`] under `key` recorded
+pub(crate) async fn file_lock_entries(root: &Path, key: &str) -> HashMap<String, String> {
+    let mut lock = OverrideLock::load(root).await;
+    lock.bundles.remove(key).unwrap_or_default()
+}
+
 pub(crate) async fn sync_file_lock(
     root: &Path,
     key: &str,
@@ -310,7 +316,7 @@ async fn write_override(dest: &Path, bytes: &[u8], rel: &str) -> bool {
     }
 }
 
-async fn current_sha1(path: &Path) -> Option<String> {
+pub(crate) async fn current_sha1(path: &Path) -> Option<String> {
     if polyio::try_exists(path).await.unwrap_or(false) {
         sha1_file(path).await.ok()
     } else {

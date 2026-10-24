@@ -16,7 +16,9 @@ use crate::bundles::install::{
     PresentContent, effective_enabled, find_override, install_bundle_files, install_external,
     remove_artifact_from_cluster,
 };
-use crate::bundles::overrides::{OverrideLayers, sync_file_lock, sync_layered_overrides};
+use crate::bundles::overrides::{
+    OverrideLayers, current_sha1, file_lock_entries, sync_file_lock, sync_layered_overrides,
+};
 use crate::bundles::{BundleFile, BundleFileKind};
 use crate::ctx::ContentCtx;
 use crate::error::{ContentError, ContentResult};
@@ -122,8 +124,11 @@ pub async fn install_modpack(
     }
 
     let game_dir = root.as_path();
+    let previous = file_lock_entries(&root, LOOSE_LOCK_KEY).await;
+    let previous = &previous;
     let loose = futures_util::stream::iter(contents.loose.iter().cloned().map(|file| async move {
-        let result = install_loose_file(&file, game_dir, progress, ctx).await;
+        let base = previous.get(&file.path).map(String::as_str);
+        let result = install_loose_file(&file, base, game_dir, progress, ctx).await;
         (file, result)
     }))
     .buffer_unordered(LOOSE_CONCURRENCY)
@@ -132,9 +137,11 @@ pub async fn install_modpack(
     let mut written = HashMap::new();
     for (file, result) in loose {
         match result {
-            Ok(()) => {
+            Ok(true) => {
                 written.insert(file.path.clone(), file.sha1.clone());
             }
+            // The lock keeps the pack's last hash for it so a later update still sees the edit
+            Ok(false) => {}
             Err(err) => {
                 tracing::warn!(path = %file.path, error = %err, "failed to install modpack file");
                 report.failed.push(file.path.clone());
@@ -427,13 +434,29 @@ async fn import_override_content(
     Ok(hashes)
 }
 
+/// `base` is the hash the pack last wrote to the path
+/// false when the file was changed since then and is left alone like an edited override
 async fn install_loose_file(
     file: &LooseFile,
+    base: Option<&str>,
     root: &Path,
     progress: Option<&GroupedProgressSession>,
     ctx: &ContentCtx,
-) -> ContentResult<()> {
+) -> ContentResult<bool> {
     let dest = root.join(polyio::sanitize_path(&file.path));
+    let disk = current_sha1(&dest)
+        .await
+        .map(|sha1| polyio::normalize_hash(&sha1));
+    let base = base.map(polyio::normalize_hash);
+    if keeps_local_edit(
+        disk.as_deref(),
+        &polyio::normalize_hash(&file.sha1),
+        base.as_deref(),
+    ) {
+        tracing::info!(path = %file.path, "keeping a modpack file changed since the pack wrote it");
+        return Ok(false);
+    }
+
     let child = progress.map(|p| {
         let child = p.child(file.path.clone(), file.size.max(1), TaskCategory::Packages);
         child.set_phase(TaskPhase::Downloading);
@@ -442,12 +465,17 @@ async fn install_loose_file(
 
     let result = store::ensure_artifact_file(&file.sha1, &file.url, &dest, child.as_ref(), ctx)
         .await
-        .map(|_| ());
+        .map(|_| true);
 
     if let Some(child) = child {
         child.finish();
     }
     result
+}
+
+/// The same rule overrides follow a file the pack never wrote is not taken over either
+fn keeps_local_edit(disk: Option<&str>, pack: &str, base: Option<&str>) -> bool {
+    disk.is_some_and(|disk| disk != pack && base != Some(disk))
 }
 
 #[tracing::instrument(level = "debug", skip(blocked))]
@@ -607,6 +635,24 @@ mod tests {
             content_type: ContentType::Mod,
             page_url: None,
         }
+    }
+
+    #[test]
+    fn a_loose_file_is_replaced_only_while_it_is_the_packs_own() {
+        assert!(
+            !keeps_local_edit(None, "new", Some("old")),
+            "a missing file is downloaded"
+        );
+        assert!(!keeps_local_edit(Some("new"), "new", Some("old")));
+        assert!(
+            !keeps_local_edit(Some("old"), "new", Some("old")),
+            "untouched since the last pack version"
+        );
+        assert!(keeps_local_edit(Some("edited"), "new", Some("old")));
+        assert!(
+            keeps_local_edit(Some("mine"), "new", None),
+            "a file the pack never wrote is left alone"
+        );
     }
 
     #[tokio::test]

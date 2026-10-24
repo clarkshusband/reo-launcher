@@ -39,6 +39,13 @@ impl PackageProvider for CurseForgeProvider {
         ctx: &ContentCtx,
     ) -> ContentResult<Page<ProjectSummary>> {
         tracing::debug!(query = ?filters.query, "searching curseforge");
+        let category_ids = match filters.categories.as_deref() {
+            Some(names) if !names.is_empty() => {
+                let content_type = filters.content_type.unwrap_or(ContentType::Mod);
+                resolve_category_ids(names, content_type, ctx).await?
+            }
+            _ => Vec::new(),
+        };
         let mut url = Url::parse(&api_url("/mods/search"))?;
 
         {
@@ -70,17 +77,28 @@ impl PackageProvider for CurseForgeProvider {
             if !query.is_empty() {
                 params.append_pair("searchFilter", &query);
             }
-            if let Some(v) = filters.game_versions.as_ref().and_then(|v| v.first()) {
-                params.append_pair("gameVersion", v);
-            }
-            if let Some(loader) = filters
+            // CurseForge takes at most 4 game versions 5 loaders and 10 categories
+            let game_versions = filters.game_versions.as_deref().unwrap_or_default();
+            append_one_or_many(
+                &mut params,
+                "gameVersion",
+                "gameVersions",
+                &game_versions[..game_versions.len().min(4)],
+            );
+            let mut loader_types: Vec<u8> = Vec::new();
+            for loader_type in filters
                 .loaders
-                .as_ref()
-                .and_then(|l| l.first())
-                .and_then(|l| cf_loader_type(*l))
+                .iter()
+                .flatten()
+                .filter_map(|l| cf_loader_type(*l))
             {
-                params.append_pair("modLoaderType", &loader.to_string());
+                if !loader_types.contains(&loader_type) {
+                    loader_types.push(loader_type);
+                }
             }
+            loader_types.truncate(5);
+            append_one_or_many(&mut params, "modLoaderType", "modLoaderTypes", &loader_types);
+            append_one_or_many(&mut params, "categoryId", "categoryIds", &category_ids);
         }
 
         let response: CfPaged<Vec<CfMod>> =
@@ -148,27 +166,41 @@ impl PackageProvider for CurseForgeProvider {
         limit: usize,
         ctx: &ContentCtx,
     ) -> ContentResult<Page<VersionSummary>> {
-        let mut url = Url::parse(&api_url(&format!("/mods/{project_id}/files")))?;
-        {
-            let mut params = url.query_pairs_mut();
-            if let Some(v) = game_version {
-                params.append_pair("gameVersion", v);
+        let mut items: Vec<VersionSummary> = Vec::new();
+        let mut total: usize = 0;
+        let mut index = offset;
+        for _ in 0..MAX_FILE_PAGES {
+            let page_size = limit
+                .saturating_sub(items.len())
+                .min(FILES_PAGE_SIZE)
+                .min(MAX_FILE_INDEX.saturating_sub(index));
+            if page_size == 0 {
+                break;
             }
-            if let Some(t) = loader.and_then(cf_loader_type) {
-                params.append_pair("modLoaderType", &t.to_string());
+
+            let mut url = Url::parse(&api_url(&format!("/mods/{project_id}/files")))?;
+            {
+                let mut params = url.query_pairs_mut();
+                if let Some(v) = game_version {
+                    params.append_pair("gameVersion", v);
+                }
+                if let Some(t) = loader.and_then(cf_loader_type) {
+                    params.append_pair("modLoaderType", &t.to_string());
+                }
+                params.append_pair("index", &index.to_string());
+                params.append_pair("pageSize", &page_size.to_string());
+            }
+            let response: CfPaged<Vec<CfFile>> =
+                fetch_json(&ctx.net, Method::GET, url.as_str(), None).await?;
+
+            total = response.pagination.total_count;
+            let fetched = response.data.len();
+            index += fetched;
+            items.extend(response.data.into_iter().map(VersionSummary::from));
+            if fetched == 0 || index >= total {
+                break;
             }
         }
-        let response: CfPaged<Vec<CfFile>> =
-            fetch_json(&ctx.net, Method::GET, url.as_str(), None).await?;
-
-        let total = response.data.len();
-        let items = response
-            .data
-            .into_iter()
-            .skip(offset)
-            .take(limit)
-            .map(VersionSummary::from)
-            .collect();
 
         Ok(Page {
             offset,
@@ -184,18 +216,11 @@ impl PackageProvider for CurseForgeProvider {
         content_type: ContentType,
         ctx: &ContentCtx,
     ) -> ContentResult<Vec<String>> {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct CfCategory {
-            name: String,
-        }
-        let mut url = Url::parse(&api_url("/categories"))?;
-        url.query_pairs_mut()
-            .append_pair("gameId", &CURSEFORGE_GAME_ID.to_string())
-            .append_pair("classId", &cf_class_id(content_type).to_string());
-        let response: CfData<Vec<CfCategory>> =
-            fetch_json(&ctx.net, Method::GET, url.as_str(), None).await?;
-        Ok(response.data.into_iter().map(|c| c.name).collect())
+        Ok(fetch_categories(content_type, ctx)
+            .await?
+            .into_iter()
+            .map(|c| c.name)
+            .collect())
     }
 
     #[tracing::instrument(level = "debug", skip(self, ctx))]
@@ -261,7 +286,7 @@ impl PackageProvider for CurseForgeProvider {
         let response: CfData<Response> = fetch_json(
             &ctx.net,
             Method::POST,
-            &api_url(&format!("/mods/fingerprints/{CURSEFORGE_GAME_ID}")),
+            &api_url(&format!("/fingerprints/{CURSEFORGE_GAME_ID}")),
             Some(body),
         )
         .await?;
@@ -352,6 +377,70 @@ impl PackageProvider for CurseForgeProvider {
             })
             .collect())
     }
+}
+
+/// CurseForge's largest page
+const FILES_PAGE_SIZE: usize = 50;
+/// Bounds an "all versions" listing popular mods have thousands of files
+const MAX_FILE_PAGES: usize = 20;
+/// CurseForge refuses an index plus page size past this
+const MAX_FILE_INDEX: usize = 10_000;
+
+/// One value goes in the singular parameter several in its JSON array form
+fn append_one_or_many<T: ToString + serde::Serialize>(
+    params: &mut url::form_urlencoded::Serializer<'_, url::UrlQuery<'_>>,
+    single: &str,
+    many: &str,
+    values: &[T],
+) {
+    match values {
+        [] => {}
+        [value] => {
+            params.append_pair(single, &value.to_string());
+        }
+        values => {
+            params.append_pair(many, &serde_json::to_string(values).unwrap_or_default());
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CfCategory {
+    id: u32,
+    name: String,
+}
+
+async fn fetch_categories(
+    content_type: ContentType,
+    ctx: &ContentCtx,
+) -> ContentResult<Vec<CfCategory>> {
+    let mut url = Url::parse(&api_url("/categories"))?;
+    url.query_pairs_mut()
+        .append_pair("gameId", &CURSEFORGE_GAME_ID.to_string())
+        .append_pair("classId", &cf_class_id(content_type).to_string());
+    let response: CfData<Vec<CfCategory>> =
+        fetch_json(&ctx.net, Method::GET, url.as_str(), None).await?;
+    Ok(response.data)
+}
+
+/// The browser filters by the names [`PackageProvider::list_categories`] returned
+/// the search wants their ids
+async fn resolve_category_ids(
+    names: &[String],
+    content_type: ContentType,
+    ctx: &ContentCtx,
+) -> ContentResult<Vec<u32>> {
+    let mut ids: Vec<u32> = Vec::new();
+    for category in fetch_categories(content_type, ctx).await? {
+        if names.iter().any(|name| name.eq_ignore_ascii_case(&category.name))
+            && !ids.contains(&category.id)
+        {
+            ids.push(category.id);
+        }
+    }
+    ids.truncate(10);
+    Ok(ids)
 }
 
 #[derive(Deserialize)]
@@ -705,6 +794,7 @@ impl CfMod {
 
 impl From<CfFile> for VersionSummary {
     fn from(f: CfFile) -> Self {
+        let (game_versions, loaders) = split_game_versions(f.game_versions, &f.mod_loaders);
         VersionSummary {
             version_id: f.id.to_string(),
             project_id: f.mod_id.to_string(),
@@ -716,12 +806,8 @@ impl From<CfFile> for VersionSummary {
                 3 => ReleaseType::Alpha,
                 _ => ReleaseType::Release,
             },
-            game_versions: f.game_versions,
-            loaders: f
-                .mod_loaders
-                .iter()
-                .filter_map(|l| cf_loader_to_game(*l))
-                .collect(),
+            game_versions,
+            loaders,
             downloads: f.download_count,
             file_size: f.file_length,
             dependencies: f.dependencies.into_iter().map(Into::into).collect(),
@@ -737,6 +823,7 @@ impl From<CfFile> for VersionDetail {
             .find(|h| h.algorithm == 1)
             .map(|h| h.value.clone())
             .unwrap_or_default();
+        let (game_versions, loaders) = split_game_versions(f.game_versions, &f.mod_loaders);
 
         VersionDetail {
             version_id: f.id.to_string(),
@@ -744,12 +831,8 @@ impl From<CfFile> for VersionDetail {
             name: f.display_name,
             version_number: f.file_name.clone(),
             changelog: None,
-            game_versions: f.game_versions,
-            loaders: f
-                .mod_loaders
-                .iter()
-                .filter_map(|l| cf_loader_to_game(*l))
-                .collect(),
+            game_versions,
+            loaders,
             published: f.file_date,
             downloads: f.download_count,
             files: vec![VersionFile {
@@ -821,6 +904,37 @@ fn cf_loader_to_game(loader: CfLoader) -> Option<GameLoader> {
         CfLoader::NeoForge => Some(GameLoader::NeoForge),
         _ => None,
     }
+}
+
+/// Files name their loader among `gameVersions` as "Forge" or "Fabric"
+/// the `modLoaders` field is not served
+fn split_game_versions(
+    names: Vec<String>,
+    mod_loaders: &[CfLoader],
+) -> (Vec<String>, Vec<GameLoader>) {
+    let mut loaders: Vec<GameLoader> = mod_loaders
+        .iter()
+        .filter_map(|l| cf_loader_to_game(*l))
+        .collect();
+    let mut game_versions = Vec::with_capacity(names.len());
+    for name in names {
+        let loader = match name.to_ascii_lowercase().as_str() {
+            "forge" => Some(GameLoader::Forge),
+            "neoforge" => Some(GameLoader::NeoForge),
+            "fabric" => Some(GameLoader::Fabric),
+            "quilt" => Some(GameLoader::Quilt),
+            _ => None,
+        };
+        match loader {
+            Some(loader) => {
+                if !loaders.contains(&loader) {
+                    loaders.push(loader);
+                }
+            }
+            None => game_versions.push(name),
+        }
+    }
+    (game_versions, loaders)
 }
 
 fn cf_loader_type(loader: GameLoader) -> Option<u8> {
@@ -900,5 +1014,55 @@ mod tests {
             .into();
 
         assert_eq!(version.files[0].url, "");
+    }
+
+    /// The API sends no `modLoaders` and an empty list let a Forge jar into a Fabric cluster
+    #[test]
+    fn the_loader_is_read_from_the_game_versions() {
+        let raw = serde_json::json!({
+            "id": 1,
+            "modId": 2,
+            "displayName": "JEI",
+            "fileName": "jei.jar",
+            "releaseType": 1,
+            "fileDate": "2025-01-01T00:00:00Z",
+            "downloadCount": 10,
+            "gameVersions": ["Client", "Forge", "NeoForge", "Server", "1.20.1"],
+            "fileFingerprint": 123,
+            "downloadUrl": "https://example.invalid/jei.jar",
+            "fileLength": 100
+        });
+
+        let file = serde_json::from_value::<CfFile>(raw).expect("curseforge file");
+        let summary = VersionSummary::from(file.clone());
+        let detail = VersionDetail::from(file);
+
+        assert_eq!(summary.loaders, vec![GameLoader::Forge, GameLoader::NeoForge]);
+        assert_eq!(detail.loaders, summary.loaders);
+        assert_eq!(
+            detail.game_versions,
+            vec!["Client".to_string(), "Server".into(), "1.20.1".into()],
+            "loader names are not listed twice"
+        );
+    }
+
+    #[test]
+    fn several_filter_values_go_out_as_a_json_array() {
+        let mut url = Url::parse("https://example.invalid/search").unwrap();
+        {
+            let mut params = url.query_pairs_mut();
+            append_one_or_many(&mut params, "gameVersion", "gameVersions", &["1.20.1"]);
+            append_one_or_many(&mut params, "categoryId", "categoryIds", &[421u32, 5]);
+            append_one_or_many::<u8>(&mut params, "modLoaderType", "modLoaderTypes", &[]);
+        }
+
+        let pairs: Vec<(String, String)> = url.query_pairs().into_owned().collect();
+        assert_eq!(
+            pairs,
+            vec![
+                ("gameVersion".to_string(), "1.20.1".to_string()),
+                ("categoryIds".to_string(), "[421,5]".to_string()),
+            ]
+        );
     }
 }
