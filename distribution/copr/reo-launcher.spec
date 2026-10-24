@@ -10,7 +10,7 @@ Summary:        Next-generation open source Minecraft launcher (prebuilt)
 
 License:        GPL-3.0-only
 URL:            https://github.com/drako1k/reo-launcher
-Source0:        %{url}/releases/download/reo-launcher-%{version}/%{_rpmfile}
+Source0:        %{url}/releases/download/reo-%{version}/%{_rpmfile}
 
 ExclusiveArch:  x86_64
 BuildRequires:  bsdtar
@@ -32,10 +32,10 @@ bsdtar -xf %{SOURCE0}
 %install
 mkdir -p %{buildroot}
 cp -a usr %{buildroot}/
-ln -s reo-launcher_app %{buildroot}%{_bindir}/reo-launcher
+ln -s reo_app %{buildroot}%{_bindir}/reo-launcher
 
 %files
-%{_bindir}/reo-launcher_app
+%{_bindir}/reo_app
 %{_bindir}/reo-launcher
 %{_datadir}/applications/*.desktop
 %{_datadir}/icons/hicolor/*/apps/*

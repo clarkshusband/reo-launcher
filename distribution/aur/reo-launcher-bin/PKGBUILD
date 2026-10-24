@@ -24,7 +24,7 @@ provides=('reo-launcher')
 conflicts=('reo-launcher')
 options=('!strip')
 _debfile="${_appname}_${pkgver}_linux_x86_64.deb"
-source=("${_debfile}::${url}/releases/download/reo-launcher-${pkgver}/${_debfile}")
+source=("${_debfile}::${url}/releases/download/reo-${pkgver}/${_debfile}")
 sha256sums=('SKIP')
 
 package() {
@@ -33,5 +33,5 @@ package() {
   bsdtar -xf data.tar.*
   rm -f debian-binary control.tar.* data.tar.*
 
-  ln -s reo-launcher_app "$pkgdir/usr/bin/reo-launcher"
+  ln -s reo_app "$pkgdir/usr/bin/reo-launcher"
 }

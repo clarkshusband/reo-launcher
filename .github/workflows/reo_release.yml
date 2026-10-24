@@ -266,6 +266,9 @@ jobs:
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          # TODO(reo): these slugs are upstream OneLauncher's SignPath project; set them to the
+          # project / signing policy / artifact configuration (.signpath/reo-binary.artifact-configuration.xml)
+          # created in the maintainer's SignPath organization
           project-slug: onelauncher
           signing-policy-slug: release-signing
           artifact-configuration-slug: onelauncher-binary
@@ -305,14 +308,15 @@ jobs:
           set -euo pipefail
           out="packages/reo_app/icons/generated"
           mkdir -p "$out"
-          xcrun actool packages/reo_app/icons/Reo Launcher.icon \
+          # --app-icon must match the .icon file name and CFBundleIconName in distribution/Info.plist
+          xcrun actool "packages/reo_app/icons/Reo.icon" \
             --compile "$out" \
-            --app-icon Reo Launcher \
+            --app-icon "Reo" \
             --output-partial-info-plist "$out/partial.plist" \
             --platform macosx \
             --minimum-deployment-target 26.0 \
             --errors --warnings --notices
-          rm -f "$out/Reo Launcher.icns"
+          rm -f "$out/Reo.icns"
           test -f "$out/Assets.car" || { echo "::error::actool produced no Assets.car"; exit 1; }
 
       - name: (Windows) Stage app-local VC++ runtime
@@ -457,6 +461,9 @@ jobs:
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          # TODO(reo): these slugs are upstream OneLauncher's SignPath project; set them to the
+          # project / signing policy / artifact configuration (.signpath/reo.artifact-configuration.xml)
+          # created in the maintainer's SignPath organization
           project-slug: onelauncher
           signing-policy-slug: release-signing
           artifact-configuration-slug: onelauncher-installer

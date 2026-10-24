@@ -46,7 +46,7 @@ jobs:
           VERSION: ${{ needs.resolve.outputs.version }}
           SHA256: ${{ steps.hash.outputs.sha256 }}
         run: |
-          PKGBUILD="distribution/aur/reo/PKGBUILD"
+          PKGBUILD="distribution/aur/reo-launcher/PKGBUILD"
           sed -i "s/^pkgver=.*/pkgver=${VERSION}/" "$PKGBUILD"
           sed -i "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD"
           sed -i "s/^sha256sums=.*/sha256sums=('${SHA256}')/" "$PKGBUILD"
@@ -54,12 +54,12 @@ jobs:
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@a97f56a8425a7a7f3b8c58607f769c69b089cadb # v3.0.1
         with:
-          pkgname: reo
-          pkgbuild: distribution/aur/reo/PKGBUILD
+          pkgname: reo-launcher
+          pkgbuild: distribution/aur/reo-launcher/PKGBUILD
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: "reo ${{ needs.resolve.outputs.version }}-1"
+          commit_message: "reo-launcher ${{ needs.resolve.outputs.version }}-1"
 
   publish-bin:
     needs: resolve
