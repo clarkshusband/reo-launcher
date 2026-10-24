@@ -59,7 +59,14 @@ pub async fn install_package(
     )
     .await?;
 
-    let extract_root = java_dir.join(stem_without_archive(&package.name));
+    let stem = stem_without_archive(&package.name);
+    let extract_root = java_dir.join(&stem);
+
+    // Corretto reuses one folder name across versions so extracting over an
+    // earlier install leaves two top-level dirs and neither gets resolved
+    if is_plain_folder_name(&stem) && extract_root.is_dir() {
+        polyio::remove_dir_all(&extract_root).await?;
+    }
 
     if let Some(child) = &child {
         child.set_phase(TaskPhase::Extracting);
@@ -244,6 +251,15 @@ fn resolve_installed_executable(extract_root: &Path, package: &JavaPackage) -> P
     }
 }
 
+/// A single normal component so clearing it can never reach past the java dir
+fn is_plain_folder_name(name: &str) -> bool {
+    let mut components = Path::new(name).components();
+    matches!(
+        (components.next(), components.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    )
+}
+
 fn stem_without_archive(name: &str) -> String {
     let path = std::path::Path::new(name);
     let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or(name);
@@ -354,6 +370,20 @@ mod tests {
         assert!(!is_launcher_managed(&theirs));
 
         std::fs::remove_dir_all(&elsewhere).unwrap();
+    }
+
+    #[test]
+    fn only_a_folder_directly_inside_the_java_dir_is_ever_cleared() {
+        assert!(is_plain_folder_name(&stem_without_archive(
+            "amazon-corretto-21-x64-windows-jdk.zip"
+        )));
+        assert!(is_plain_folder_name(&stem_without_archive(
+            "amazon-corretto-21-x64-linux-jdk.tar.gz"
+        )));
+        assert!(!is_plain_folder_name(""));
+        assert!(!is_plain_folder_name("."));
+        assert!(!is_plain_folder_name(".."));
+        assert!(!is_plain_folder_name("nested/jdk"));
     }
 
     #[test]

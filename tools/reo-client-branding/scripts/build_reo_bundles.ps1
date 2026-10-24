@@ -8,6 +8,8 @@
 #     (a bundle entry is only treated as a Modrinth-managed package when a
 #     downloads entry is a cdn.modrinth.com URL, and managed entries are
 #     downloaded from Modrinth by version id - never from us)
+#   * those entries get `id` = the Modrinth project id (slug as a fallback) so
+#     the launcher's per-mod Disable/Remove choices survive a jar rebuild
 #   * display metadata for those entries (name/description/authors) is filled
 #     into the entry `overrides` so the mod list does not fall back to filenames
 #   * every other entry, override file and bundle field is copied unchanged
@@ -80,7 +82,13 @@ foreach ($t in $tasks) {
     if ($fmj.PSObject.Properties['name']) { $uiName = [string]$fmj.name }
     if ($fmj.PSObject.Properties['description']) { $uiDescription = [string]$fmj.description }
   }
+  # The launcher keys Disable/Remove choices by this id; without it they hang
+  # off the jar sha1 and are lost on every rebuild.
+  $packageId = [string]$t.projectId
+  if (-not $packageId) { $packageId = [string]$t.slug }
+  if (-not $packageId) { throw "task $($t.outName) has no projectId or slug for a stable id" }
   $facts = [pscustomobject]@{
+    packageId    = $packageId
     outName      = $t.outName
     sha1         = (Get-FileHash -Algorithm SHA1 -LiteralPath $jar).Hash.ToLower()
     sha512       = (Get-FileHash -Algorithm SHA512 -LiteralPath $jar).Hash.ToLower()
@@ -121,6 +129,7 @@ foreach ($b in $bundleMeta) {
     $f.hashes.sha1 = $j.sha1
     $f.hashes.sha512 = $j.sha512
     $f.fileSize = [int64]$j.bytes
+    $f | Add-Member -NotePropertyName id -NotePropertyValue $j.packageId -Force
     $override = [ordered]@{ authors = @('drako') }
     if ($j.uiName) { $override['name'] = $j.uiName }
     if ($j.uiDescription) { $override['description'] = $j.uiDescription }

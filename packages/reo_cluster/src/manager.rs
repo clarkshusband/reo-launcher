@@ -156,7 +156,7 @@ impl ClusterManager {
             folder_stem.clone()
         };
 
-        let folder_name = resolve_unique_folder_name(&folder_stem).await?;
+        let folder_name = resolve_unique_folder_name(&self.db, &folder_stem).await?;
         let cluster_path = reo_common::paths::clusters_dir()?.join(&folder_name);
 
         match create_inner(
@@ -429,6 +429,7 @@ impl ClusterManager {
             return Err(ClusterError::NotFound(cluster_id));
         }
 
+        self.forget_own_profile(&cluster).await;
         remove_mods_link(&cluster.folder_name).await;
 
         if let Some(trashed) = trashed {
@@ -449,6 +450,42 @@ impl ClusterManager {
 
         tracing::info!(cluster_id, remove_files, "deleted cluster");
         Ok(())
+    }
+
+    /// The profile created with the cluster is named after its folder and goes
+    /// with it unless another cluster was pointed at it, and runs after the row
+    /// is gone since the row's foreign key would block it
+    async fn forget_own_profile(&self, cluster: &Cluster) {
+        // A create in between could hand this name to a new cluster's profile
+        let _guard = self.provisioning.lock().await;
+
+        let profile_name = cluster.folder_name.as_str();
+        // A cluster switched to another profile leaves a same-named one to the user
+        if cluster.setting_profile_name.as_deref() != Some(profile_name) {
+            return;
+        }
+
+        let still_used = match cluster_dao::list_all(&self.db).await {
+            Ok(rows) => rows
+                .iter()
+                .any(|row| row.setting_profile_name.as_deref() == Some(profile_name)),
+            Err(err) => {
+                tracing::warn!(cluster_id = cluster.id, error = %err, "could not check whether the deleted cluster's settings profile is shared");
+                return;
+            }
+        };
+        if still_used {
+            return;
+        }
+
+        match profile_dao::delete_by_name(&self.db, profile_name).await {
+            Ok(()) => tracing::debug!(cluster_id = cluster.id, profile = profile_name, "deleted the cluster's settings profile"),
+            // Already gone or never created under this name
+            Err(reo_db::DbError::NotFound) => {}
+            Err(err) => {
+                tracing::warn!(cluster_id = cluster.id, profile = profile_name, error = %err, "failed to delete the deleted cluster's settings profile");
+            }
+        }
     }
 
     #[tracing::instrument(level = "debug", skip(self))]
@@ -703,25 +740,48 @@ fn cap_folder_stem(name: &str) -> String {
         .collect()
 }
 
-async fn resolve_unique_folder_name(name: &str) -> ClusterResult<String> {
+async fn resolve_unique_folder_name(db: &DbPool, name: &str) -> ClusterResult<String> {
     let cluster_dir = reo_common::paths::clusters_dir()?;
-    let mut folder_name = name.to_string();
-    let mut path = cluster_dir.join(&folder_name);
+    let recorded: Vec<String> = cluster_dao::list_all(db)
+        .await?
+        .into_iter()
+        .map(|row| row.folder_name)
+        .collect();
 
-    if path.exists() {
-        let mut which = 1;
-        loop {
-            let candidate = format!("{folder_name} ({which})");
-            path = cluster_dir.join(&candidate);
-            if !path.exists() {
-                folder_name = candidate;
-                break;
-            }
-            which += 1;
-        }
+    Ok(first_free_folder_name(name, &recorded, |candidate| {
+        cluster_dir.join(candidate).exists()
+    }))
+}
+
+/// The cluster's settings profile is named after its folder so a name is taken
+/// by the Global profile too, and by a row whose folder was deleted outside the
+/// launcher since that row still owns the profile
+fn first_free_folder_name(
+    name: &str,
+    recorded: &[String],
+    on_disk: impl Fn(&str) -> bool,
+) -> String {
+    // Case-insensitive like the Windows and macOS file systems
+    let taken = |candidate: &str| {
+        profile_dao::is_reserved_global_name(candidate)
+            || recorded
+                .iter()
+                .any(|folder| folder.eq_ignore_ascii_case(candidate))
+            || on_disk(candidate)
+    };
+
+    if !taken(name) {
+        return name.to_string();
     }
 
-    Ok(folder_name)
+    let mut which = 1;
+    loop {
+        let candidate = format!("{name} ({which})");
+        if !taken(&candidate) {
+            return candidate;
+        }
+        which += 1;
+    }
 }
 
 #[tracing::instrument(level = "debug")]
@@ -740,7 +800,44 @@ async fn ensure_content_dirs(cluster_path: &std::path::Path) -> ClusterResult<()
 
 #[cfg(test)]
 mod tests {
-    use super::{COVER_MAX_EDGE, ClusterManager, cap_folder_stem, is_cover_file, shrink_cover};
+    use super::{
+        COVER_MAX_EDGE, ClusterManager, cap_folder_stem, first_free_folder_name, is_cover_file,
+        shrink_cover,
+    };
+
+    #[test]
+    fn a_folder_name_nobody_holds_is_used_as_is() {
+        assert_eq!(first_free_folder_name("Survival", &[], |_| false), "Survival");
+    }
+
+    #[test]
+    fn the_global_profile_name_is_never_a_cluster_folder() {
+        assert_eq!(first_free_folder_name("Global", &[], |_| false), "Global (1)");
+    }
+
+    #[test]
+    fn a_row_whose_folder_was_deleted_still_holds_its_name() {
+        let recorded = vec!["Survival".to_string()];
+
+        assert_eq!(
+            first_free_folder_name("Survival", &recorded, |_| false),
+            "Survival (1)"
+        );
+        assert_eq!(
+            first_free_folder_name("survival", &recorded, |_| false),
+            "survival (1)"
+        );
+    }
+
+    #[test]
+    fn disk_and_database_are_both_consulted_for_each_suffix() {
+        let recorded = vec!["Pack (1)".to_string()];
+
+        assert_eq!(
+            first_free_folder_name("Pack", &recorded, |candidate| candidate == "Pack"),
+            "Pack (2)"
+        );
+    }
 
     #[test]
     fn a_long_modpack_name_gets_a_short_folder() {

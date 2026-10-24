@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use parking_lot::RwLock;
 
 use crate::{LauncherError, LauncherResult};
@@ -42,46 +44,103 @@ pub async fn load_settings(notify: Option<&EventBus>) -> LauncherSettings {
 }
 
 async fn recover_after_failed_load() -> LauncherSettings {
-    let mut settings = LauncherSettings::default();
-
     let Ok(path) = paths::settings_file() else {
-        return settings;
+        return LauncherSettings::default();
     };
 
     let Ok(data) = polyio::read(&path).await else {
-        return settings;
+        return LauncherSettings::default();
     };
 
-    match serde_json::from_slice::<serde_json::Value>(&data) {
-        Ok(value) => {
-            settings.data_dir = salvaged_data_dir(&value);
-
-            if let Some(dir) = &settings.data_dir {
-                tracing::warn!(
-                    data_dir = %dir.display(),
-                    "settings did not parse; kept the data folder they named"
-                );
+    let value = match serde_json::from_slice::<serde_json::Value>(&data) {
+        Ok(value) if value.is_object() => value,
+        other => {
+            match other {
+                Err(err) => tracing::warn!("settings file is not valid JSON: {err}"),
+                Ok(_) => tracing::warn!("settings file does not hold a settings object"),
             }
-        }
-        Err(err) => {
-            tracing::warn!("settings file is not valid JSON: {err}");
 
-            let Ok(aside) = paths::damaged_settings_file() else {
-                return settings;
-            };
-
-            match polyio::rename(&path, &aside).await {
-                Ok(()) => {
-                    tracing::warn!(path = %aside.display(), "kept the damaged settings file")
-                }
-                Err(err) => {
-                    tracing::warn!("could not set the damaged settings file aside: {err}")
-                }
-            }
+            set_aside(&path, false).await;
+            return LauncherSettings::default();
         }
+    };
+
+    let (mut settings, dropped) = salvage_fields(&value);
+    settings.data_dir = salvaged_data_dir(&value);
+    settings.migrate();
+
+    if !dropped.is_empty() {
+        tracing::warn!(
+            fields = ?dropped,
+            "settings did not parse; reset only the fields that failed"
+        );
+
+        // Copied not moved so what was salvaged still loads if nothing saves first
+        set_aside(&path, true).await;
+    }
+
+    if let Some(dir) = &settings.data_dir {
+        tracing::warn!(
+            data_dir = %dir.display(),
+            "settings did not parse; kept the data folder they named"
+        );
     }
 
     settings
+}
+
+/// Keeps the original so the next save cannot overwrite what the user had
+async fn set_aside(path: &Path, keep_in_place: bool) {
+    let Ok(aside) = paths::damaged_settings_file() else {
+        return;
+    };
+
+    let result = if keep_in_place {
+        polyio::copy(path, &aside).await.map(|_| ())
+    } else {
+        polyio::rename(path, &aside).await
+    };
+
+    match result {
+        Ok(()) => tracing::warn!(path = %aside.display(), "kept the damaged settings file"),
+        Err(err) => tracing::warn!("could not set the damaged settings file aside: {err}"),
+    }
+}
+
+/// Lays each top-level field onto the defaults keeping those that still parse
+fn salvage_fields(value: &serde_json::Value) -> (LauncherSettings, Vec<String>) {
+    let mut dropped = Vec::new();
+
+    let Ok(serde_json::Value::Object(mut merged)) =
+        serde_json::to_value(LauncherSettings::default())
+    else {
+        return (LauncherSettings::default(), dropped);
+    };
+
+    for (key, field) in value.as_object().into_iter().flatten() {
+        let previous = merged.insert(key.clone(), field.clone());
+
+        let parses =
+            serde_json::from_value::<LauncherSettings>(serde_json::Value::Object(merged.clone()))
+                .is_ok();
+        if parses {
+            continue;
+        }
+
+        match previous {
+            Some(previous) => {
+                merged.insert(key.clone(), previous);
+            }
+            None => {
+                merged.remove(key);
+            }
+        }
+        dropped.push(key.clone());
+    }
+
+    let settings: LauncherSettings =
+        serde_json::from_value(serde_json::Value::Object(merged)).unwrap_or_default();
+    (settings, dropped)
 }
 
 fn salvaged_data_dir(value: &serde_json::Value) -> Option<std::path::PathBuf> {
@@ -142,6 +201,28 @@ mod tests {
             Some(std::path::PathBuf::from("D:\\ReoLauncher")),
             "the location has to survive whatever else is wrong with the file"
         );
+    }
+
+    #[test]
+    fn one_bad_field_resets_only_itself() {
+        let raw = r#"{"max_concurrent_requests":"25","seen_onboarding":true,"accepted_tos_version":3}"#;
+        let (settings, dropped) =
+            salvage_fields(&serde_json::from_str(raw).expect("valid json"));
+
+        assert_eq!(dropped, vec!["max_concurrent_requests".to_owned()]);
+        assert_eq!(settings.max_concurrent_requests, 25);
+        assert!(settings.seen_onboarding);
+        assert_eq!(settings.accepted_tos_version, 3);
+    }
+
+    #[test]
+    fn a_sound_file_drops_nothing() {
+        let raw = r#"{"seen_onboarding":true,"some_old_field":1}"#;
+        let (settings, dropped) =
+            salvage_fields(&serde_json::from_str(raw).expect("valid json"));
+
+        assert!(dropped.is_empty());
+        assert!(settings.seen_onboarding);
     }
 
     #[test]

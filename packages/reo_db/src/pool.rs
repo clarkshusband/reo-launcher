@@ -1,7 +1,6 @@
 use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::path::Path;
-use std::str::FromStr;
 use std::time::Duration;
 
 use crate::DbError;
@@ -20,15 +19,15 @@ pub async fn connect(database_path: impl AsRef<Path>) -> Result<DbPool, DbError>
         std::fs::create_dir_all(parent)?;
     }
 
-    let options = SqliteConnectOptions::from_str(&format!(
-        "sqlite://{}?mode=rwc",
-        dunce::canonicalize(database_path)
-            .unwrap_or_else(|_| database_path.to_path_buf())
-            .display()
-    ))?
-    .create_if_missing(true)
-    .journal_mode(SqliteJournalMode::Wal)
-    .busy_timeout(BUSY_TIMEOUT);
+    // Set as a filename rather than parsed from a URL which would percent-decode
+    // a literal `%XX` in the data dir and open the wrong file
+    let options = SqliteConnectOptions::new()
+        .filename(
+            dunce::canonicalize(database_path).unwrap_or_else(|_| database_path.to_path_buf()),
+        )
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .busy_timeout(BUSY_TIMEOUT);
 
     let pool = SqlitePoolOptions::new()
         .max_connections(4)

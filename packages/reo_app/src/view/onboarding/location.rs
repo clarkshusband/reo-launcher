@@ -76,7 +76,7 @@ impl Component for OnboardingLocation {
                 }
 
                 match crate::events::start_launcher(station, events).await {
-                    Ok(()) => actions.sync_bundles(),
+                    Ok(()) => crate::events::finish_startup(&actions),
                     Err(err) => {
                         crate::events::report_startup_failure(&station, &err);
                         waiting.set(false);

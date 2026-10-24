@@ -40,15 +40,15 @@ jobs:
         env:
           VERSION: ${{ needs.resolve.outputs.version }}
         run: |
-          SPEC="distribution/copr/reo-launcher-bin.spec"
+          SPEC="distribution/copr/reo-launcher.spec"
           sed -i "s/^Version:.*/Version:        ${VERSION}/" "$SPEC"
           sed -i "s/^Release:.*/Release:        1%{?dist}/" "$SPEC"
 
       - name: Build SRPM
         run: |
           rpmdev-setuptree
-          spectool -g -R distribution/copr/reo-launcher-bin.spec
-          rpmbuild -bs distribution/copr/reo-launcher-bin.spec
+          spectool -g -R distribution/copr/reo-launcher.spec
+          rpmbuild -bs distribution/copr/reo-launcher.spec
 
       - name: Submit to COPR
         env:
@@ -57,4 +57,6 @@ jobs:
           mkdir -p ~/.config
           printf '%s' "$COPR_CONFIG_CONTENT" > ~/.config/copr
           chmod 600 ~/.config/copr
-          copr-cli build polyfrost/Reo Launcher ~/rpmbuild/SRPMS/reo-launcher-bin-*.src.rpm
+          # TODO(reo): set this to the maintainer's own COPR <owner>/<project>; polyfrost/... is
+          # upstream's account and a COPR project name cannot contain a space
+          copr-cli build "polyfrost/Reo Launcher" ~/rpmbuild/SRPMS/reo-launcher-bin-*.src.rpm

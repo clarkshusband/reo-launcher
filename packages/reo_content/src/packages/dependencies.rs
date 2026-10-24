@@ -138,7 +138,7 @@ pub(crate) async fn resolve_one(
             let Some(project_id) = dep.project_id.as_deref() else {
                 return Ok(None);
             };
-            let Some(pick) = pick_version(provider, project_id, cluster, ctx).await? else {
+            let Some(pick) = pick_version(provider, project_id, None, cluster, ctx).await? else {
                 return Ok(None);
             };
             provider
@@ -152,9 +152,11 @@ pub(crate) async fn resolve_one(
 }
 
 /// Falls back to the newest prerelease when no release fits the cluster
+/// `content_type` is `None` for a dependency nothing is known about yet
 pub(crate) async fn pick_version(
     provider: &dyn PackageProvider,
     project_id: &str,
+    content_type: Option<ContentType>,
     cluster: &ClusterRow,
     ctx: &ContentCtx,
 ) -> ContentResult<Option<VersionSummary>> {
@@ -188,15 +190,16 @@ pub(crate) async fn pick_version(
             .items;
     }
 
-    Ok(choose_version(candidates, cluster, loader))
+    Ok(choose_version(candidates, cluster, loader, content_type))
 }
 
 fn choose_version(
     mut candidates: Vec<VersionSummary>,
     cluster: &ClusterRow,
     loader: GameLoader,
+    content_type: Option<ContentType>,
 ) -> Option<VersionSummary> {
-    candidates.retain(|version| fits_cluster(version, cluster, loader));
+    candidates.retain(|version| fits_cluster(version, cluster, loader, content_type));
     // Neither provider promises an order so sort rather than trust the page
     candidates.sort_by_key(|version| std::cmp::Reverse(version.published));
 
@@ -221,12 +224,27 @@ pub(crate) fn supports_game_version(game_versions: &[String], mc_version: &str) 
     game_versions.is_empty() || game_versions.iter().any(|v| base_game_version(v) == wanted)
 }
 
-fn fits_cluster(version: &VersionSummary, cluster: &ClusterRow, loader: GameLoader) -> bool {
+fn fits_cluster(
+    version: &VersionSummary,
+    cluster: &ClusterRow,
+    loader: GameLoader,
+    content_type: Option<ContentType>,
+) -> bool {
     if !supports_game_version(&version.game_versions, &cluster.mc_version) {
         return false;
     }
 
-    version.loaders.is_empty() || version.loaders.iter().any(|l| loader.compatible_with(*l))
+    // Only mods are held to the loader as at install
+    // resource packs tag themselves "minecraft" which no modded loader accepts so an
+    // untyped version tagged only that is taken for one
+    let loader_bound = match content_type {
+        Some(content_type) => content_type == ContentType::Mod,
+        None => !version.loaders.iter().all(|l| *l == GameLoader::Vanilla),
+    };
+
+    !loader_bound
+        || version.loaders.is_empty()
+        || version.loaders.iter().any(|l| loader.compatible_with(*l))
 }
 
 async fn installed_project_ids(
@@ -352,7 +370,7 @@ mod tests {
             ),
         ];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric);
+        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, Some(ContentType::Mod));
         assert_eq!(pick.unwrap().version_id, "new");
     }
 
@@ -376,7 +394,7 @@ mod tests {
             ),
         ];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric);
+        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, Some(ContentType::Mod));
         assert_eq!(pick.unwrap().version_id, "beta");
     }
 
@@ -407,7 +425,7 @@ mod tests {
             ),
         ];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric);
+        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, None);
         assert_eq!(pick.unwrap().version_id, "fits");
     }
 
@@ -422,21 +440,61 @@ mod tests {
             vec!["1.21.4"],
         )];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric);
+        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, Some(ContentType::Mod));
         assert_eq!(pick.unwrap().version_id, "pack");
     }
 
     #[test]
     fn no_compatible_version_resolves_to_nothing() {
         let cluster = cluster(GameLoader::Fabric, "1.21.4");
-        let candidates = vec![summary(
-            "forge",
-            ReleaseType::Release,
-            1,
-            vec![GameLoader::Forge],
-            vec!["1.21.4"],
-        )];
+        let candidates = || {
+            vec![summary(
+                "forge",
+                ReleaseType::Release,
+                1,
+                vec![GameLoader::Forge],
+                vec!["1.21.4"],
+            )]
+        };
 
-        assert!(choose_version(candidates, &cluster, GameLoader::Fabric).is_none());
+        assert!(
+            choose_version(candidates(), &cluster, GameLoader::Fabric, Some(ContentType::Mod))
+                .is_none()
+        );
+        assert!(
+            choose_version(candidates(), &cluster, GameLoader::Fabric, None).is_none(),
+            "an untyped dependency naming a modded loader is still held to it"
+        );
+    }
+
+    /// Modrinth lists resource pack versions under the "minecraft" loader
+    #[test]
+    fn a_resource_pack_tagged_minecraft_fits_a_modded_cluster() {
+        let cluster = cluster(GameLoader::Fabric, "1.21.4");
+        let candidates = || {
+            vec![summary(
+                "pack",
+                ReleaseType::Release,
+                1,
+                vec![GameLoader::Vanilla],
+                vec!["1.21.4"],
+            )]
+        };
+
+        let pick = choose_version(
+            candidates(),
+            &cluster,
+            GameLoader::Fabric,
+            Some(ContentType::ResourcePack),
+        );
+        assert_eq!(pick.unwrap().version_id, "pack");
+        assert!(
+            choose_version(candidates(), &cluster, GameLoader::Fabric, None).is_some(),
+            "an untyped version tagged only minecraft is loader agnostic"
+        );
+        assert!(
+            choose_version(candidates(), &cluster, GameLoader::Fabric, Some(ContentType::Mod))
+                .is_none()
+        );
     }
 }

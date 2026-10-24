@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::checker::{JavaCheckInfo, check_java_runtime};
 use crate::data::java_executable_relative_path;
 use crate::error::JavaResult;
+use crate::platform::matches_host_arch;
 use crate::service::parse_major_version;
 use reo_common::constants::JAVA_BIN;
 
@@ -44,10 +45,13 @@ pub fn best_for_major(candidates: &[LocatedJava], major: u32) -> Option<&Located
         .min_by(|(_, a), (_, b)| compare_candidates(a, b))
 }
 
-/// Best first a JDK beats a JRE outright then the newer version wins
+/// Best first a JVM built for this host beats one that is not, as a 32-bit JRE
+/// cannot reserve a large heap, then a JDK beats a JRE outright and then the
+/// newer version wins
 fn compare_candidates(a: &JavaCheckInfo, b: &JavaCheckInfo) -> Ordering {
-    b.is_jdk
-        .cmp(&a.is_jdk)
+    matches_host_arch(&b.os_arch)
+        .cmp(&matches_host_arch(&a.os_arch))
+        .then_with(|| b.is_jdk.cmp(&a.is_jdk))
         .then_with(|| version_key(b).cmp(&version_key(a)))
 }
 
@@ -68,15 +72,27 @@ fn version_key(info: &JavaCheckInfo) -> (u32, Vec<u32>) {
 fn internal_locate_java() -> Vec<PathBuf> {
     let mut java_homes = Vec::new();
 
+    // A 32-bit launcher sees the x86 folder as ProgramFiles
+    let program_files = std::env::var_os("ProgramW6432")
+        .or_else(|| std::env::var_os("ProgramFiles"))
+        .map_or_else(|| PathBuf::from(r"C:\Program Files"), PathBuf::from);
+    let program_files_x86 = std::env::var_os("ProgramFiles(x86)")
+        .map_or_else(|| PathBuf::from(r"C:\Program Files (x86)"), PathBuf::from);
+
     let windows_paths = {
         let mut paths = vec![
-            PathBuf::from(r"C:\Program Files\Java"),
-            PathBuf::from(r"C:\Program Files (x86)\Java"),
-            PathBuf::from(r"C:\Program Files\Eclipse Adoptium"),
-            PathBuf::from(r"C:\Program Files\Amazon Corretto"),
-            PathBuf::from(r"C:\Program Files\Zulu"),
-            PathBuf::from(r"C:\Program Files\OpenJDK"),
-            PathBuf::from(r"C:\Program Files\Microsoft"),
+            program_files.join("Java"),
+            program_files_x86.join("Java"),
+            program_files.join("Eclipse Adoptium"),
+            program_files.join("Eclipse Foundation"),
+            program_files.join("AdoptOpenJDK"),
+            program_files.join("Amazon Corretto"),
+            program_files.join("BellSoft"),
+            program_files.join("Zulu"),
+            program_files.join("OpenJDK"),
+            program_files.join("Microsoft"),
+            program_files.join("Semeru"),
+            program_files.join("IBM"),
             PathBuf::from(r"C:\ProgramData\chocolatey\lib"),
         ];
         if let Some(profile) = std::env::var_os("USERPROFILE").map(PathBuf::from) {
@@ -101,16 +117,70 @@ fn internal_locate_java() -> Vec<PathBuf> {
         }
     }
 
+    // Each IDE bundles the JetBrains Runtime in its own jbr folder
+    if let Ok(ides) = std::fs::read_dir(program_files.join("JetBrains")) {
+        for ide in ides.flatten() {
+            let java_exe = ide
+                .path()
+                .join("jbr")
+                .join(java_executable_relative_path());
+            if java_exe.exists() {
+                java_homes.push(java_exe);
+            }
+        }
+    }
+
+    let mut minecraft_runtimes = vec![program_files_x86.join("Minecraft Launcher").join("runtime")];
+    if let Some(local) = std::env::var_os("LOCALAPPDATA").map(PathBuf::from) {
+        minecraft_runtimes.push(
+            local
+                .join("Packages")
+                .join("Microsoft.4297127D64EC6_8wekyb3d8bbwe")
+                .join("LocalCache")
+                .join("Local")
+                .join("runtime"),
+        );
+    }
+    if let Some(roaming) = std::env::var_os("APPDATA").map(PathBuf::from) {
+        minecraft_runtimes.push(roaming.join(".minecraft").join("runtime"));
+    }
+
+    // The official launcher keeps each runtime at <component>\<platform>\<component>
+    for root in minecraft_runtimes {
+        let Ok(components) = std::fs::read_dir(root) else {
+            continue;
+        };
+        for component in components.flatten() {
+            let Ok(platforms) = std::fs::read_dir(component.path()) else {
+                continue;
+            };
+            for platform in platforms.flatten() {
+                let java_exe = platform
+                    .path()
+                    .join(component.file_name())
+                    .join(java_executable_relative_path());
+                if java_exe.exists() {
+                    java_homes.push(java_exe);
+                }
+            }
+        }
+    }
+
     if let Ok(java_home) = std::env::var("JAVA_HOME") {
-        let java_exe = PathBuf::from(java_home).join(java_executable_relative_path());
+        let java_exe =
+            PathBuf::from(java_home.trim().trim_matches('"')).join(java_executable_relative_path());
         if java_exe.exists() {
             java_homes.push(java_exe);
         }
     }
 
-    if let Ok(path) = std::env::var("PATH") {
-        for path_entry in path.split(';') {
-            let java_exe = PathBuf::from(path_entry).join(JAVA_BIN);
+    // split_paths drops the quotes Windows allows around an entry
+    if let Some(path) = std::env::var_os("PATH") {
+        for path_entry in std::env::split_paths(&path) {
+            if path_entry.as_os_str().is_empty() {
+                continue;
+            }
+            let java_exe = path_entry.join(JAVA_BIN);
             if java_exe.exists() && !java_homes.contains(&java_exe) {
                 java_homes.push(java_exe);
             }
@@ -222,10 +292,15 @@ mod tests {
             JavaCheckInfo {
                 version: version.to_string(),
                 vendor: String::from("Test"),
-                os_arch: String::from("x64"),
+                os_arch: crate::platform::host_os_arch().to_string(),
                 is_jdk,
             },
         )
+    }
+
+    fn foreign(mut located: LocatedJava) -> LocatedJava {
+        located.1.os_arch = crate::platform::foreign_os_arch().to_string();
+        located
     }
 
     fn ranked(mut candidates: Vec<LocatedJava>) -> Vec<String> {
@@ -267,6 +342,28 @@ mod tests {
 
         let (path, _) = best_for_major(&candidates, 17).expect("a java 17 candidate");
         assert_eq!(path, &PathBuf::from("/jdk-17"));
+    }
+
+    #[test]
+    fn a_runtime_built_for_the_host_beats_a_newer_foreign_kit() {
+        let candidates = vec![
+            foreign(candidate("/x86/jdk-8", "1.8.0_412", true)),
+            candidate("/jre-8", "1.8.0_402", false),
+        ];
+
+        let (path, _) = best_for_major(&candidates, 8).expect("a java 8 candidate");
+        assert_eq!(path, &PathBuf::from("/jre-8"));
+    }
+
+    #[test]
+    fn a_foreign_runtime_is_still_picked_when_nothing_else_fits() {
+        let candidates = vec![
+            foreign(candidate("/x86/jre-8", "1.8.0_412", false)),
+            candidate("/jdk-21", "21.0.3", true),
+        ];
+
+        let (path, _) = best_for_major(&candidates, 8).expect("a java 8 candidate");
+        assert_eq!(path, &PathBuf::from("/x86/jre-8"));
     }
 
     #[test]

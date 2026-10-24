@@ -73,66 +73,78 @@ pub async fn fetch_cached(
     cache_path: &Path,
     policy: EtagPolicy,
 ) -> Result<Option<Fetched>, RequestError> {
-    let stored_etag = read_sidecar_etag(cache_path).await;
-    let mut request = reqwest::Request::new(Method::GET, url.parse()?);
-
-    if let Some(etag) = &stored_etag
-        && let Ok(value) = header::HeaderValue::from_str(etag)
-    {
-        request.headers_mut().insert(header::IF_NONE_MATCH, value);
-    }
+    let mut stored_etag = read_sidecar_etag(cache_path).await;
 
     let cached = || async {
         match polyio::read(cache_path).await {
-            Ok(bytes) => Ok(Some(Fetched {
+            Ok(bytes) => Some(Fetched {
                 bytes,
                 changed: false,
                 etag: None,
-            })),
+            }),
             Err(err) => {
                 tracing::debug!("no usable cache at {}: {err}", cache_path.display());
-                Ok(None)
+                None
             }
         }
     };
 
-    match client.send(request).await {
-        Ok(res) if res.status() == StatusCode::NOT_MODIFIED => {
-            tracing::debug!("cache hit (304)");
-            cached().await
+    loop {
+        let mut request = reqwest::Request::new(Method::GET, url.parse()?);
+        *request.timeout_mut() = Some(crate::service::API_REQUEST_TIMEOUT);
+
+        if let Some(etag) = &stored_etag
+            && let Ok(value) = header::HeaderValue::from_str(etag)
+        {
+            request.headers_mut().insert(header::IF_NONE_MATCH, value);
         }
-        Ok(res) if res.status().is_success() => {
-            let server_etag = res
-                .headers()
-                .get(header::ETAG)
-                .and_then(|value| value.to_str().ok())
-                .map(str::to_string);
 
-            let bytes = res.bytes().await?.to_vec();
-            polyio::write_atomic(cache_path, &bytes).await?;
-
-            let etag = match (&server_etag, policy) {
-                (Some(etag), EtagPolicy::CommitNow) => {
-                    commit_etag(cache_path, etag).await;
-                    None
+        match client.send(request).await {
+            Ok(res) if res.status() == StatusCode::NOT_MODIFIED => {
+                tracing::debug!("cache hit (304)");
+                let fetched = cached().await;
+                if fetched.is_some() || stored_etag.is_none() {
+                    return Ok(fetched);
                 }
-                (_, EtagPolicy::Defer) => server_etag,
-                (None, EtagPolicy::CommitNow) => None,
-            };
 
-            Ok(Some(Fetched {
-                bytes,
-                changed: true,
-                etag,
-            }))
-        }
-        Ok(res) => {
-            tracing::warn!(status = %res.status(), "unexpected response; using cache if present");
-            cached().await
-        }
-        Err(err) => {
-            tracing::debug!("fetch failed, using cache if present: {err}");
-            cached().await
+                // The sidecar outlived its body and would keep earning a 304
+                tracing::warn!("304 with no cached body; refetching without the etag");
+                let _ = polyio::remove_file(etag_path(cache_path)).await;
+                stored_etag = None;
+            }
+            Ok(res) if res.status().is_success() => {
+                let server_etag = res
+                    .headers()
+                    .get(header::ETAG)
+                    .and_then(|value| value.to_str().ok())
+                    .map(str::to_string);
+
+                let bytes = res.bytes().await?.to_vec();
+                polyio::write_atomic(cache_path, &bytes).await?;
+
+                let etag = match (&server_etag, policy) {
+                    (Some(etag), EtagPolicy::CommitNow) => {
+                        commit_etag(cache_path, etag).await;
+                        None
+                    }
+                    (_, EtagPolicy::Defer) => server_etag,
+                    (None, EtagPolicy::CommitNow) => None,
+                };
+
+                return Ok(Some(Fetched {
+                    bytes,
+                    changed: true,
+                    etag,
+                }));
+            }
+            Ok(res) => {
+                tracing::warn!(status = %res.status(), "unexpected response; using cache if present");
+                return Ok(cached().await);
+            }
+            Err(err) => {
+                tracing::debug!("fetch failed, using cache if present: {err}");
+                return Ok(cached().await);
+            }
         }
     }
 }

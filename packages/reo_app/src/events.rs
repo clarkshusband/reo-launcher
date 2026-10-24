@@ -380,6 +380,15 @@ pub async fn start_launcher(
     Ok(())
 }
 
+/// What every successful [`start_launcher`] is followed by, wherever it ran from
+pub fn finish_startup(actions: &crate::hooks::Actions) {
+    // `sync_bundles` needs the launcher handle and is the only thing that clears
+    // `syncing_bundles`, so it has to follow a start or every launch button stays disabled
+    actions.sync_bundles();
+    crate::hooks::Actions::check_sessions();
+    crate::microsoft_java::spawn_auto_install();
+}
+
 pub fn report_startup_failure(station: &RadioStation<AppState, AppChannel>, err: &anyhow::Error) {
     let message = err.to_string();
     tracing::error!("launcher init failed: {err:#}");

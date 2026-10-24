@@ -581,12 +581,14 @@ mod tests {
         }
     }
 
+    /// Keyed by the bundle's name as override rows are, not its category
     fn overridden(
         project_id: &str,
         override_type: OverrideType,
     ) -> HashMap<(String, String), String> {
+        let bundle_name = archive("performance", true, Vec::new()).manifest.name;
         HashMap::from([(
-            ("performance".to_string(), project_id.to_string()),
+            (bundle_name, project_id.to_string()),
             override_type.as_str().to_string(),
         )])
     }

@@ -4,7 +4,7 @@ use reo_net::RequestClient;
 use reo_net::{EtagPolicy, fetch_cached};
 
 const CHANGELOG_URL: &str =
-    "https://github.com/drako1k/reo-launcher/releases/latest/download/changelog.json";
+    "https://github.com/clarkshusband/reo-launcher/releases/latest/download/changelog.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub struct ChangelogEntry {

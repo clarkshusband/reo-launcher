@@ -33,7 +33,7 @@ options=(
   '!lto'
   '!debug'
 )
-source=("$pkgname-$pkgver.tar.gz::${url}/archive/refs/tags/reo-launcher-${pkgver}.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::${url}/archive/refs/tags/reo-${pkgver}.tar.gz")
 sha256sums=('SKIP')
 
 _srcdir="reo-launcher-reo-${pkgver}"
@@ -49,20 +49,20 @@ build() {
   export CARGO_HOME="$srcdir/cargo-home"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR=target
-  cargo build --release --frozen --bin reo-launcher_app
+  cargo build --release --frozen --bin reo_app
 }
 
 package() {
   cd "$srcdir/$_srcdir"
-  local appdir="packages/reo-launcher_app"
+  local appdir="packages/reo_app"
 
-  install -Dm755 "target/release/reo-launcher_app" "$pkgdir/usr/bin/reo-launcher_app"
-  ln -s reo-launcher_app "$pkgdir/usr/bin/reo-launcher"
+  install -Dm755 "target/release/reo_app" "$pkgdir/usr/bin/reo_app"
+  ln -s reo_app "$pkgdir/usr/bin/reo-launcher"
 
   install -dm755 "$pkgdir/usr/share/applications"
-  sed -e 's|{{exec}}|reo-launcher_app|g' \
+  sed -e 's|{{exec}}|reo_app|g' \
       -e 's|{{icon}}|org.polyfrost.ReoLauncher|g' \
-      "$appdir/distribution/linux/org.polyfrost.reo-launcher.template" \
+      "$appdir/distribution/linux/com.drako.reolauncher.template" \
       > "$pkgdir/usr/share/applications/org.polyfrost.ReoLauncher.desktop"
 
   install -Dm644 "$appdir/icons/32x32.png"    "$pkgdir/usr/share/icons/hicolor/32x32/apps/org.polyfrost.ReoLauncher.png"

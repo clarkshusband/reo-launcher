@@ -4,6 +4,9 @@ use reo_core::{LauncherError, TermsDocument, fetch_terms};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TermsKeys {
     pub meta_url_base: String,
+    /// Startup mounts this before the launcher is up and a settled error is
+    /// never retried, so readiness is part of the key to run it again
+    pub ready: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -22,8 +25,15 @@ impl QueryCapability for TermsQuery {
 
 pub fn use_terms() -> UseQuery<TermsQuery> {
     let meta_url_base = super::use_meta_url_key();
+    let ready = crate::hooks::use_launcher().ready;
 
-    use_query(Query::new(TermsKeys { meta_url_base }, TermsQuery))
+    use_query(Query::new(
+        TermsKeys {
+            meta_url_base,
+            ready,
+        },
+        TermsQuery,
+    ))
 }
 
 pub fn terms_document(query: &UseQuery<TermsQuery>) -> Option<TermsDocument> {

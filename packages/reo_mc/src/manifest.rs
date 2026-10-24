@@ -65,7 +65,25 @@ impl MetadataStore {
 
         self.ensure_initialized(ctx).await?;
 
+        // a manifest that failed to fetch earlier is retried rather than reported
+        // missing for the rest of the session
+        if self.get_modded(loader).is_err() {
+            self.refetch_modded(ctx, loader).await;
+        }
+
         self.get_modded(loader)
+    }
+
+    async fn refetch_modded(&mut self, ctx: &McCtx, loader: GameLoader) {
+        match fetch_modded_manifest(ctx, loader).await {
+            Ok(data) => {
+                if let Some(slot) = self.inner.modded_slot(loader) {
+                    *slot = Some(data);
+                    self.version_loader_cache.clear();
+                }
+            }
+            Err(err) => tracing::warn!("failed to fetch manifest for {loader}: {err}"),
+        }
     }
 
     pub fn get_vanilla(&self) -> McResult<&VanillaManifest> {
@@ -202,12 +220,17 @@ impl MetadataStore {
         check_modded!(quilt);
         check_modded!(ornithe);
 
+        if changed > 0 {
+            self.version_loader_cache.clear();
+        }
+
         changed
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
     pub async fn fetch_all(&mut self, ctx: &McCtx) {
         self.inner.fetch_all(ctx).await;
+        self.version_loader_cache.clear();
     }
 
     #[tracing::instrument(level = "debug", skip(self, ctx))]
@@ -291,6 +314,17 @@ impl MetadataInner {
         keep_fetched(&mut self.fabric, fabric);
         keep_fetched(&mut self.quilt, quilt);
         keep_fetched(&mut self.ornithe, ornithe);
+    }
+
+    fn modded_slot(&mut self, loader: GameLoader) -> Option<&mut Option<ModdedManifest>> {
+        match loader {
+            GameLoader::Forge => Some(&mut self.forge),
+            GameLoader::NeoForge => Some(&mut self.neo),
+            GameLoader::Fabric => Some(&mut self.fabric),
+            GameLoader::Quilt => Some(&mut self.quilt),
+            GameLoader::Ornithe => Some(&mut self.ornithe),
+            GameLoader::Vanilla => None,
+        }
     }
 
     const fn has_any(&self) -> bool {

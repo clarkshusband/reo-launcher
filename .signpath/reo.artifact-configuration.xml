@@ -8,8 +8,9 @@
   The NSIS bundle produced by Tauri is named e.g. "ReoLauncher_1.1.6_x64-setup.exe",
   so we match it with a wildcard instead of a fixed, version-specific name.
 
-  Upload this file in the SignPath portal:
-    Project "onelauncher" -> Artifact Configurations -> slug "onelauncher-installer"
+  Upload this file in the SignPath portal under the project and artifact
+  configuration slugs that reo_release.yml submits the installer to
+  (TODO(reo): the workflow still names upstream's "onelauncher" / "onelauncher-installer")
 -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>

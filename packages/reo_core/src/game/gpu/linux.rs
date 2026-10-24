@@ -175,6 +175,7 @@ fn pci_ids_model(ids: &str, vendor: u32, model: u32) -> Option<&str> {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     const IDS: &str = "\
 # comment
 10de  NVIDIA Corporation
@@ -225,11 +226,14 @@ mod tests {
         assert_eq!(Driver::from_name(None), Driver::Other);
     }
 
+    #[cfg(unix)]
     fn write(path: &Path, contents: &str) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, contents).unwrap();
     }
 
+    // A sysfs tree is built from unix symlinks so these only run where they exist
+    #[cfg(unix)]
     fn write_card(bus: &Path, address: &str, vendor: &str, model: &str, driver: &str) {
         let device = bus.join(address);
         write(&device.join("class"), "0x030000\n");
@@ -241,6 +245,7 @@ mod tests {
         std::os::unix::fs::symlink(&target, device.join("driver")).unwrap();
     }
 
+    #[cfg(unix)]
     #[test]
     fn lists_the_cards_that_can_render_out_of_a_sysfs_tree() {
         let scratch = polyio::testing::ScratchDir::new("gpu-sysfs");

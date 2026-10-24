@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use std::{
@@ -241,18 +242,87 @@ where
 )]
 pub async fn write_stream<S, E>(
     path: impl AsRef<std::path::Path>,
-    mut stream: S,
+    stream: S,
     size_hint: Option<u64>,
 ) -> Result<(), E>
 where
     S: futures_lite::Stream<Item = Result<bytes::Bytes, E>> + Unpin + Send,
     E: From<IOError>,
 {
+    let staged = write_stream_staged(path, stream, size_hint).await?;
+    staged.commit().await.map_err(E::from)
+}
+
+/// A fully written scratch sibling that has not replaced its destination yet
+/// so the bytes can be checked first
+///
+/// Dropping it without [`StagedFile::commit`] removes the scratch file
+#[must_use = "the scratch file is removed unless it is committed"]
+pub struct StagedFile {
+    tmp: PathBuf,
+    dest: PathBuf,
+    settled: bool,
+}
+
+impl StagedFile {
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.tmp
+    }
+
+    /// Renames the scratch file over the destination replacing it
+    pub async fn commit(mut self) -> PolyIOResult<()> {
+        let result = rename(&self.tmp, &self.dest).await;
+        if result.is_err() {
+            let _ = tokio::fs::remove_file(&self.tmp).await;
+        }
+        self.settled = true;
+        result
+    }
+
+    /// Leaves the destination as it was
+    pub async fn discard(mut self) {
+        let _ = tokio::fs::remove_file(&self.tmp).await;
+        self.settled = true;
+    }
+}
+
+impl Drop for StagedFile {
+    fn drop(&mut self) {
+        // An early return or a cancelled download must not strand the scratch file
+        if !self.settled {
+            let _ = std::fs::remove_file(&self.tmp);
+        }
+    }
+}
+
+/// Like [`write_stream`] but stops short of the rename so the caller can verify
+/// the bytes and only then [`StagedFile::commit`] them over `path`
+#[tracing::instrument(
+    level = "debug",
+    skip(path, stream),
+    fields(path = %path.as_ref().display())
+)]
+pub async fn write_stream_staged<S, E>(
+    path: impl AsRef<std::path::Path>,
+    mut stream: S,
+    size_hint: Option<u64>,
+) -> Result<StagedFile, E>
+where
+    S: futures_lite::Stream<Item = Result<bytes::Bytes, E>> + Unpin + Send,
+    E: From<IOError>,
+{
     let path = path.as_ref();
-    let tmp = temp_sibling(path);
+    let staged = StagedFile {
+        tmp: temp_sibling(path),
+        dest: path.to_path_buf(),
+        settled: false,
+    };
 
     let write = async {
-        let file = tokio::fs::File::create(&tmp).await.map_err(IOError::from)?;
+        let file = tokio::fs::File::create(&staged.tmp)
+            .await
+            .map_err(IOError::from)?;
         let mut writer = tokio::io::BufWriter::with_capacity(write_buffer_size(size_hint), file);
 
         while let Some(chunk_result) = futures_lite::StreamExt::next(&mut stream).await {
@@ -271,16 +341,11 @@ where
     .await;
 
     if let Err(err) = write {
-        let _ = tokio::fs::remove_file(&tmp).await;
+        staged.discard().await;
         return Err(err);
     }
 
-    if let Err(err) = rename(&tmp, path).await {
-        let _ = tokio::fs::remove_file(&tmp).await;
-        return Err(E::from(err));
-    }
-
-    Ok(())
+    Ok(staged)
 }
 
 #[tracing::instrument(
@@ -488,12 +553,42 @@ pub fn ensure_under<R: AsRef<Path>>(
     Ok(None)
 }
 
+/// `None` when the link is unreadable or leads back into a directory this copy
+/// is already inside which would otherwise recurse forever
+fn followable_dir_link(cur_src: &Path, link: &Path, entered: &[PathBuf]) -> Option<PathBuf> {
+    let target = match crate::canonicalize(link) {
+        Ok(target) => target,
+        Err(err) => {
+            tracing::debug!(link = %link.display(), "skipping an unresolvable link: {err}");
+            return None;
+        }
+    };
+
+    let here = crate::canonicalize(cur_src).ok();
+    if here
+        .iter()
+        .chain(entered.iter())
+        .any(|dir| dir.starts_with(&target))
+    {
+        tracing::warn!(link = %link.display(), "skipping a link back into the folder being copied");
+        return None;
+    }
+
+    Some(target)
+}
+
+/// Symlinks and Windows junctions are copied as the contents they point at
 #[tracing::instrument(level = "debug", skip(exclude_top))]
 pub async fn copy_dir(src: &Path, dst: &Path, exclude_top: &[&str]) -> PolyIOResult<()> {
-    let mut stack: Vec<(PathBuf, PathBuf, bool)> =
-        vec![(src.to_path_buf(), dst.to_path_buf(), true)];
+    // The real source root plus every directory entered through a link on the
+    // way down to an entry
+    let root = Arc::new(vec![
+        crate::canonicalize(src).unwrap_or_else(|_| src.to_path_buf()),
+    ]);
+    let mut stack: Vec<(PathBuf, PathBuf, bool, Arc<Vec<PathBuf>>)> =
+        vec![(src.to_path_buf(), dst.to_path_buf(), true, root)];
 
-    while let Some((cur_src, cur_dst, is_top)) = stack.pop() {
+    while let Some((cur_src, cur_dst, is_top, entered)) = stack.pop() {
         let mut entries = read_dir(&cur_src).await?;
         while let Some(entry) = entries.next_entry().await? {
             let name = entry.file_name();
@@ -507,12 +602,36 @@ pub async fn copy_dir(src: &Path, dst: &Path, exclude_top: &[&str]) -> PolyIORes
 
             let child_src = entry.path();
             let child_dst = cur_dst.join(&name);
-            let file_type = entry.file_type().await?;
+            let mut file_type = entry.file_type().await?;
+            let mut link_target = None;
+
+            if file_type.is_symlink() {
+                let Ok(target) = tokio::fs::metadata(&child_src).await else {
+                    tracing::debug!(link = %child_src.display(), "skipping a dangling link");
+                    continue;
+                };
+                file_type = target.file_type();
+
+                if file_type.is_dir() {
+                    let Some(real) = followable_dir_link(&cur_src, &child_src, &entered) else {
+                        continue;
+                    };
+                    link_target = Some(real);
+                }
+            }
 
             if file_type.is_dir() {
                 create_dir_all(&child_dst).await?;
 
-                stack.push((child_src, child_dst, false));
+                let child_entered = match link_target {
+                    Some(real) => {
+                        let mut chain = entered.to_vec();
+                        chain.push(real);
+                        Arc::new(chain)
+                    }
+                    None => Arc::clone(&entered),
+                };
+                stack.push((child_src, child_dst, false, child_entered));
             } else if file_type.is_file() {
                 if let Some(parent) = child_dst.parent() {
                     create_dir_all(parent).await?;
@@ -1079,6 +1198,57 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    #[tokio::test]
+    async fn a_discarded_staged_write_keeps_the_old_file() {
+        let dir = scratch("stream-staged");
+        let target = dir.join("object.bin");
+        std::fs::write(&target, b"known-good").unwrap();
+
+        let chunks = vec![Ok(bytes::Bytes::from_static(b"rejected"))];
+        let stream = Box::pin(futures_lite::stream::iter(chunks));
+        let staged = write_stream_staged::<_, IOError>(&target, stream, Some(8))
+            .await
+            .unwrap();
+
+        assert_eq!(std::fs::read(staged.path()).unwrap(), b"rejected");
+        assert_eq!(std::fs::read(&target).unwrap(), b"known-good");
+
+        staged.discard().await;
+
+        assert_eq!(std::fs::read(&target).unwrap(), b"known-good");
+        let leftovers: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n != "object.bin")
+            .collect();
+        assert!(
+            leftovers.is_empty(),
+            "left scratch files behind: {leftovers:?}"
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn dropping_a_staged_write_removes_the_scratch_file() {
+        let dir = scratch("stream-staged-drop");
+        let target = dir.join("object.bin");
+
+        let chunks = vec![Ok(bytes::Bytes::from_static(b"bytes"))];
+        let stream = Box::pin(futures_lite::stream::iter(chunks));
+        let staged = write_stream_staged::<_, IOError>(&target, stream, Some(5))
+            .await
+            .unwrap();
+        let scratch_path = staged.path().to_path_buf();
+        drop(staged);
+
+        assert!(!scratch_path.exists());
+        assert!(!target.exists());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn ensure_under_accepts_a_path_inside_a_root() {
         let dir = scratch("under-inside");
@@ -1146,6 +1316,35 @@ mod tests {
         assert!(
             dst.join("keep").join("mods").join("nested.jar").exists(),
             "exclusion must not apply below the top level"
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn copy_dir_follows_directory_links_but_not_back_into_itself() {
+        let dir = scratch("copy-dir-links");
+        let src = dir.join("src");
+        let shared = dir.join("shared");
+        let dst = dir.join("dst");
+        std::fs::create_dir_all(src.join("saves")).unwrap();
+        std::fs::create_dir_all(&shared).unwrap();
+        std::fs::write(shared.join("pack.zip"), b"pack").unwrap();
+
+        symlink_dir(&shared, src.join("resourcepacks")).await.unwrap();
+        symlink_dir(&src, src.join("saves").join("loop")).await.unwrap();
+
+        copy_dir(&src, &dst, &[]).await.unwrap();
+
+        assert_eq!(
+            std::fs::read(dst.join("resourcepacks").join("pack.zip")).unwrap(),
+            b"pack",
+            "a linked folder should be copied as its contents"
+        );
+        assert!(dst.join("saves").is_dir());
+        assert!(
+            !dst.join("saves").join("loop").exists(),
+            "a link back to the source must not be followed"
         );
 
         std::fs::remove_dir_all(&dir).unwrap();

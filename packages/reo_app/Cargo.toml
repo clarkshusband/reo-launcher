@@ -133,6 +133,12 @@ Section "-OneClientTauriMigration"
   Delete /REBOOTOK "$INSTDIR\\OneClient.exe"
 SectionEnd
 
+; The un. prefix makes this an uninstaller section. The app writes the
+; reolauncher:// handler itself on every start, so nothing else removes it.
+Section "un.RemoveUrlScheme"
+  DeleteRegKey HKCU "Software\\Classes\\reolauncher"
+SectionEnd
+
 ; >>> VC_REDIST_SECTION >>>
 Section "-VCRedist"
   SetRegView 64

@@ -9,6 +9,7 @@ use reo_net::RequestClient;
 use crate::checker::{self, JavaCheckInfo};
 use crate::data::{JavaPackage, JavaRuntime};
 use crate::error::{JavaError, JavaResult};
+use crate::platform::matches_host_arch;
 use crate::resolve::resolve_java_executable;
 use crate::store::JavaStore;
 use crate::vendors::{self, JavaVendor};
@@ -203,8 +204,9 @@ impl JavaService {
         Ok(())
     }
 
-    /// A recorded JRE is kept only as a fallback so a system scan gets its
-    /// chance to turn up a JDK of the same major first
+    /// A recorded JRE or a runtime built for another architecture is kept only
+    /// as a fallback so a system scan gets its chance to turn up a better fit
+    /// of the same major first
     #[tracing::instrument(level = "debug", skip(self, progress))]
     pub async fn prepare(
         &self,
@@ -217,6 +219,7 @@ impl JavaService {
 
         if let Some(runtime) = &recorded
             && runtime.is_jdk
+            && matches_host_arch(&runtime.os_arch)
         {
             return Ok(runtime.clone());
         }
@@ -225,9 +228,11 @@ impl JavaService {
             let located = crate::locate::locate_java().await?;
             self.register_located(&located).await?;
 
-            // A located runtime only displaces a recorded one by being a JDK
+            // A located runtime only displaces a recorded one by fitting better
             if let Some((path, info)) = crate::locate::best_for_major(&located, major)
-                && (info.is_jdk || recorded.is_none())
+                && recorded.as_ref().is_none_or(|runtime| {
+                    fitness(&info.os_arch, info.is_jdk) > fitness(&runtime.os_arch, runtime.is_jdk)
+                })
             {
                 return self.persist(path, info).await;
             }
@@ -447,14 +452,21 @@ impl JavaService {
     }
 }
 
-/// Ranked highest-first the default vendor beats every other, a kit beats a
-/// runtime of the same vendor, and only then does the newest build win
-fn pick_order(runtime: &JavaRuntime, preferred: &JavaVendor) -> (bool, bool, Vec<u32>) {
+/// Ranked highest-first a runtime built for this host beats one that is not,
+/// then the default vendor beats every other, a kit beats a runtime of the same
+/// vendor, and only then does the newest build win
+fn pick_order(runtime: &JavaRuntime, preferred: &JavaVendor) -> (bool, bool, bool, Vec<u32>) {
     (
+        matches_host_arch(&runtime.os_arch),
         &runtime.vendor == preferred,
         runtime.is_jdk,
         version_key(&runtime.version),
     )
+}
+
+/// Ranked highest-first being built for this host matters more than being a kit
+fn fitness(os_arch: &str, is_jdk: bool) -> (bool, bool) {
+    (matches_host_arch(os_arch), is_jdk)
 }
 
 /// `21.0.9` sorts above `21.0.12` as text which is backwards so the components
@@ -474,6 +486,7 @@ fn provider_for_vendor(vendor: &JavaVendor) -> Option<Box<dyn vendors::JavaRunti
 
 /// Java 8 and earlier report `1.8.0_412` where the major is the *second*
 /// component 9 and later report `21.0.3` where it is the first
+/// Early-access and local builds append `-ea`, `-internal` or `+build`
 pub(crate) fn parse_major_version(version: &str) -> Result<u32, JavaError> {
     if let Some(rest) = version.strip_prefix("1.") {
         let digit = rest.chars().next().ok_or_else(|| JavaError::ParseVersion {
@@ -484,7 +497,7 @@ pub(crate) fn parse_major_version(version: &str) -> Result<u32, JavaError> {
         });
     }
 
-    let head = version.split('.').next().unwrap_or(version);
+    let head = version.split(['.', '-', '+', '_']).next().unwrap_or(version);
     head.parse::<u32>().map_err(|_| JavaError::ParseVersion {
         version: version.to_string(),
     })
@@ -507,9 +520,20 @@ mod tests {
     }
 
     #[test]
+    fn early_access_and_local_builds_keep_their_major() {
+        assert_eq!(parse_major_version("25-ea").unwrap(), 25);
+        assert_eq!(parse_major_version("26-ea+3").unwrap(), 26);
+        assert_eq!(parse_major_version("17-internal").unwrap(), 17);
+        assert_eq!(parse_major_version("21+35").unwrap(), 21);
+        assert_eq!(parse_major_version("21.0.1-ea").unwrap(), 21);
+        assert_eq!(parse_major_version("1.8.0_412-b08").unwrap(), 8);
+    }
+
+    #[test]
     fn garbage_is_rejected_rather_than_defaulted() {
         assert!(parse_major_version("not-a-version").is_err());
         assert!(parse_major_version("1.x").is_err());
+        assert!(parse_major_version("-ea").is_err());
     }
 
     fn runtime(vendor: JavaVendor, version: &str, is_jdk: bool) -> JavaRuntime {
@@ -518,10 +542,15 @@ mod tests {
             major: parse_major_version(version).unwrap(),
             version: version.to_string(),
             vendor,
-            os_arch: "x64".to_string(),
+            os_arch: crate::platform::host_os_arch().to_string(),
             is_jdk,
             probe_version: PROBE_VERSION,
         }
+    }
+
+    fn foreign(mut runtime: JavaRuntime) -> JavaRuntime {
+        runtime.os_arch = crate::platform::foreign_os_arch().to_string();
+        runtime
     }
 
     /// Highest first the same way `best_recorded_for_major` sorts
@@ -575,5 +604,40 @@ mod tests {
         );
 
         assert_eq!(picked.version, "21.0.12");
+    }
+
+    #[test]
+    fn a_runtime_built_for_the_host_beats_a_foreign_kit_of_the_default_vendor() {
+        let picked = best(
+            vec![
+                foreign(runtime(JavaVendor::Microsoft, "1.8.0_412", true)),
+                runtime(JavaVendor::Zulu, "1.8.0_402", false),
+            ],
+            &JavaVendor::Microsoft,
+        );
+
+        assert_eq!(picked.vendor, JavaVendor::Zulu);
+    }
+
+    #[test]
+    fn among_foreign_runtimes_the_usual_order_still_applies() {
+        let picked = best(
+            vec![
+                foreign(runtime(JavaVendor::Zulu, "1.8.0_412", true)),
+                foreign(runtime(JavaVendor::Microsoft, "1.8.0_402", false)),
+            ],
+            &JavaVendor::Microsoft,
+        );
+
+        assert_eq!(picked.vendor, JavaVendor::Microsoft);
+    }
+
+    #[test]
+    fn fitting_the_host_outweighs_being_a_kit() {
+        let host = crate::platform::host_os_arch();
+        let elsewhere = crate::platform::foreign_os_arch();
+
+        assert!(fitness(host, false) > fitness(elsewhere, true));
+        assert!(fitness(host, true) > fitness(host, false));
     }
 }

@@ -138,6 +138,16 @@ pub fn url_shortcut(url: &str, icon: &Path) -> String {
     )
 }
 
+/// Windows reads an INI file as the ANSI code page unless it opens with a
+/// UTF-16LE byte order mark, which a non-ASCII install path needs
+pub fn utf16le_with_bom(text: &str) -> Vec<u8> {
+    let mut bytes = vec![0xFF, 0xFE];
+    for unit in text.encode_utf16() {
+        bytes.extend_from_slice(&unit.to_le_bytes());
+    }
+    bytes
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,5 +257,20 @@ mod tests {
         assert!(file.contains("\r\nURL=reolauncher://launch/My%20Pack\r\n"));
         assert!(file.contains(r"IconFile=C:\Program Files\Reo Launcher\reo_app.exe"));
         assert!(file.ends_with("IconIndex=0\r\n"));
+    }
+
+    #[test]
+    fn a_non_ascii_path_survives_the_utf16_encoding() {
+        let bytes = utf16le_with_bom("IconFile=C:\\Użytkownik\r\n");
+
+        assert_eq!(&bytes[..2], &[0xFF, 0xFE]);
+        let units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+            .collect();
+        assert_eq!(
+            String::from_utf16(&units).unwrap(),
+            "IconFile=C:\\Użytkownik\r\n"
+        );
     }
 }

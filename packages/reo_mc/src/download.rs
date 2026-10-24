@@ -49,9 +49,44 @@ pub async fn fetch_bytes_verified(
     category: TaskCategory,
     expected_size: u64,
     url: &str,
-    expected_sha1: &str,
+    expected_sha1: Option<&str>,
 ) -> McResult<Vec<u8>> {
     let child = progress.child(label, expected_size, category);
 
-    Ok(reo_net::fetch_verified(requester, events, url, expected_sha1, Some(child)).await?)
+    if let Some(expected_sha1) = expected_sha1 {
+        return Ok(
+            reo_net::fetch_verified(requester, events, url, expected_sha1, Some(child)).await?,
+        );
+    }
+
+    // a manifest that publishes no hash leaves the status and size as the checks
+    let response = requester
+        .send(reqwest::Request::new(reqwest::Method::GET, url.parse()?))
+        .await?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(reo_net::RequestError::HttpStatus {
+            status: status.as_u16(),
+            url: url.to_string(),
+            snippet: String::new(),
+        }
+        .into());
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(reo_net::RequestError::from)?;
+    let received = bytes.len() as u64;
+    if expected_size > 0 && received != expected_size {
+        return Err(reo_net::RequestError::IncompleteBody {
+            source_desc: url.to_string(),
+            expected: expected_size,
+            actual: received,
+        }
+        .into());
+    }
+
+    child.finish();
+    Ok(bytes.to_vec())
 }

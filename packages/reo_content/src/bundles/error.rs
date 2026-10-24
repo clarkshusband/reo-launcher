@@ -19,4 +19,7 @@ pub enum BundleError {
 
     #[error("bundle not found: {0}")]
     NotFound(String),
+
+    #[error("some bundle content did not install: {}", .0.join(", "))]
+    Incomplete(Vec<String>),
 }

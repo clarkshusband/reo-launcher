@@ -12,7 +12,7 @@ use reo_db::models::UnfinishedSession;
 use crate::clusters::Cluster;
 use crate::game::launch::{Exit, SessionEnd, finalize_session};
 use crate::game::log_replay::{self, ServerSpan};
-use crate::game::process::{is_process_alive, kill_process};
+use crate::game::process::{is_process_alive, kill_process, process_start_time};
 use crate::game::session::SessionRecorder;
 use crate::game::tail::spawn_log_tail;
 use crate::state::LauncherState;
@@ -102,18 +102,38 @@ async fn classify(
         (Some(pid), Some(pid_started_at)) => u32::try_from(pid)
             .ok()
             .filter(|pid| is_process_alive(*pid, Some(pid_started_at as u64))),
+        // Unreadable when the game had only just spawned reading it as dead
+        // would clear the content out from under a game still playing
         (Some(pid), None) => {
+            let alive = u32::try_from(pid)
+                .ok()
+                .filter(|pid| predates_session(*pid, started_at));
             tracing::debug!(
                 cluster_id,
                 pid,
-                "session has no process start time; not re-adopting"
+                alive = alive.is_some(),
+                "session has no process start time; judging it by the session start"
             );
-            None
+            alive
         }
         (None, _) => None,
     };
 
     Some((cluster, session, started_at, alive))
+}
+
+/// Covers the second-granular process clock and the moment between the spawn
+/// and the session row being written
+const SPAWN_SLACK_SECS: i64 = 5;
+
+/// The session row is written just after the spawn so the game started before
+/// it a process that started later holds a recycled pid
+fn predates_session(pid: u32, session_started_at: DateTime<Utc>) -> bool {
+    process_start_time(pid).is_some_and(|at| {
+        at > 0
+            && i64::try_from(at)
+                .is_ok_and(|at| at <= session_started_at.timestamp() + SPAWN_SLACK_SECS)
+    })
 }
 
 /// Ends at the start time which books no playtime rather than inventing some
@@ -145,12 +165,29 @@ async fn readopt(
 
     tracing::info!(cluster_id, pid, "re-adopting running game");
 
-    let open_server = open_server_of(state, &session.started_at).await;
+    let log_path = reo_cluster::logs::cluster_output_log(&cluster).ok();
+    let (open_server, replayed) = match &log_path {
+        Some(path) => catch_up(state, &session.started_at, started_at, path).await,
+        None => (open_server_of(state, &session.started_at).await, 0),
+    };
     let recorder = SessionRecorder::resume(
         state.services.db.clone(),
         session.started_at.clone(),
         open_server,
     );
+
+    // Pinned now if the launch could not read it so a recycled pid is never
+    // mistaken for this game
+    let pid_started_at = match session.pid_started_at {
+        Some(at) => Some(at as u64),
+        None => {
+            let at = process_start_time(pid);
+            if at.is_some() {
+                recorder.record_process(pid, at).await;
+            }
+            at
+        }
+    };
 
     state.games.set_stage(cluster_id, LaunchStage::Running);
     state.games.set_pid(cluster_id, Some(pid));
@@ -173,7 +210,7 @@ async fn readopt(
         mc_version: cluster.mc_version.clone(),
     });
 
-    let Ok(log_path) = reo_cluster::logs::cluster_output_log(&cluster) else {
+    let Some(log_path) = log_path else {
         return;
     };
     // A re-adopted game still writes its log so crashes stay readable even
@@ -184,6 +221,7 @@ async fn readopt(
         log_path,
         state.services.events.clone(),
         Some(recorder.clone()),
+        replayed,
         crash_watch.clone(),
     );
 
@@ -199,7 +237,6 @@ async fn readopt(
         .ok()
         .and_then(|profile| profile.hook_post);
     let dedicated = cluster.uses_dedicated_dir();
-    let pid_started_at = session.pid_started_at.map(|t| t as u64);
     let state = Arc::clone(state);
 
     tokio::spawn(async move {
@@ -397,6 +434,35 @@ async fn open_server_of(state: &Arc<LauncherState>, session_id: &str) -> Option<
         .map(|row| row.joined_at)
 }
 
+/// The previous run booked only what it saw before it closed so the spans are
+/// rebuilt from what the game has logged since it started
+/// Returns the span left open and how far into the log the replay reached the
+/// tail records only past it or every join would be booked a second time
+async fn catch_up(
+    state: &Arc<LauncherState>,
+    session_id: &str,
+    started_at: DateTime<Utc>,
+    log_path: &Path,
+) -> (Option<String>, u64) {
+    let Ok(bytes) = polyio::read(log_path).await else {
+        return (open_server_of(state, session_id).await, 0);
+    };
+
+    // A line still being written is left to the tail which records it once its
+    // newline lands
+    let replayed = bytes
+        .iter()
+        .rposition(|&byte| byte == b'\n')
+        .map_or(0, |at| at + 1);
+    let content = String::from_utf8_lossy(&bytes[..replayed]);
+    let replay = log_replay::replay(&content, started_at);
+
+    (
+        apply_spans(state, session_id, &replay.servers).await,
+        replayed as u64,
+    )
+}
+
 struct SessionLog {
     content: String,
     modified: Option<DateTime<Utc>>,
@@ -424,7 +490,9 @@ async fn read_session_log(cluster: &Cluster) -> Option<SessionLog> {
 }
 
 async fn read_log(path: &Path) -> Option<SessionLog> {
-    let content = polyio::read_to_string(path).await.ok()?;
+    // Lossy a JVM on Windows can log in the native codepage and one stray byte
+    // must not cost the whole session its playtime
+    let content = String::from_utf8_lossy(&polyio::read(path).await.ok()?).into_owned();
     let modified = polyio::stat(path)
         .await
         .ok()

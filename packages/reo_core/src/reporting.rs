@@ -59,7 +59,7 @@ pub fn init(enabled: bool) -> Option<ClientInitGuard> {
     let guard = sentry::init((
         SENTRY_DSN,
         ClientOptions::new()
-            .release(format!("oneclient@{}", env!("CARGO_PKG_VERSION")))
+            .release(format!("reo-launcher@{}", env!("CARGO_PKG_VERSION")))
             .environment(ENVIRONMENT)
             .attach_stacktrace(true)
             .send_default_pii(false)

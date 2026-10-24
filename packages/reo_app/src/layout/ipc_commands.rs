@@ -38,6 +38,10 @@ pub fn use_ipc_commands() {
                         }
                     }
                     IpcCommand::Close => platform::close(),
+                    // Same guard as the window close, a half-copied data folder is unrecoverable
+                    IpcCommand::Quit if reo_core::relocate::in_progress() => {
+                        tracing::warn!("quit request ignored, the data folder is still being moved");
+                    }
                     IpcCommand::Quit => platform::quit(),
                 }
             }

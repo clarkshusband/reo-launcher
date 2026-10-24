@@ -183,16 +183,18 @@ async fn cached_artifact_for(state: &LauncherState, path: &Path) -> Option<Cache
             .flatten()?;
 
     let canonical = artifact_absolute_path(&row.path).ok()?;
-    if same_file(&canonical, path) {
-        Some(CacheMatch::IsTheArtifact)
-    } else {
-        Some(CacheMatch::Elsewhere)
+    if same_file(&canonical, path)? {
+        return Some(CacheMatch::IsTheArtifact);
     }
+
+    // A row whose cache file is gone leaves the cluster copy as the only one
+    let cached = polyio::stat(&canonical)
+        .await
+        .is_ok_and(|meta| meta.is_file());
+    cached.then_some(CacheMatch::Elsewhere)
 }
 
-fn same_file(a: &Path, b: &Path) -> bool {
-    match (polyio::canonicalize(a), polyio::canonicalize(b)) {
-        (Ok(a), Ok(b)) => a == b,
-        _ => a == b,
-    }
+/// None when either path cannot be resolved so callers keep the file
+fn same_file(a: &Path, b: &Path) -> Option<bool> {
+    Some(polyio::canonicalize(a).ok()? == polyio::canonicalize(b).ok()?)
 }

@@ -244,8 +244,44 @@ pub fn package_version_dir(
     Ok(packages_cache_dir()?
         .join(content_type.folder_name())
         .join(provider.dir_name())
-        .join(project_id)
-        .join(version_id))
+        .join(&*safe_component(project_id))
+        .join(&*safe_component(version_id)))
+}
+
+/// Provider-supplied ids end up as folder names so anything that could climb
+/// out of the cache or name a Windows device is rewritten while ordinary ids
+/// pass through untouched and keep resolving to their existing folders
+fn safe_component(id: &str) -> std::borrow::Cow<'_, str> {
+    const RESERVED: &[&str] = &[
+        "CON", "PRN", "AUX", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
+        "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7",
+        "LPT8", "LPT9",
+    ];
+
+    let forbidden = |c: char| {
+        matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') || c.is_control()
+    };
+    // Windows reserves the device name with any extension and trailing spaces
+    let stem = id.split('.').next().unwrap_or(id).trim_end_matches(' ');
+    let reserved = RESERVED.iter().any(|name| name.eq_ignore_ascii_case(stem));
+    // Covers empty `.` and `..` as well as names Windows would silently trim
+    let bad_ending = id.is_empty() || id.ends_with(['.', ' ']);
+
+    if !reserved && !bad_ending && !id.contains(forbidden) {
+        return std::borrow::Cow::Borrowed(id);
+    }
+
+    let mut safe: String = id
+        .chars()
+        .map(|c| if forbidden(c) { '_' } else { c })
+        .collect();
+    if reserved {
+        safe.insert(0, '_');
+    }
+    if bad_ending {
+        safe.push('_');
+    }
+    std::borrow::Cow::Owned(safe)
 }
 
 #[cfg(test)]
@@ -279,6 +315,34 @@ mod tests {
                 .any(|part| part == OsStr::new("Roaming")),
             "settings and saves follow the user between machines; Local would strand them"
         );
+    }
+
+    #[test]
+    fn ordinary_package_ids_are_left_alone() {
+        for id in ["AANobbMI", "238222", "4.0.1+mc1.21", "fabric-api_0.92", "imported"] {
+            assert!(
+                matches!(safe_component(id), std::borrow::Cow::Borrowed(same) if same == id),
+                "{id} should pass through unchanged"
+            );
+        }
+    }
+
+    #[test]
+    fn package_ids_cannot_escape_or_name_a_device() {
+        for (id, expected) in [
+            ("..", ".._"),
+            (".", "._"),
+            ("", "_"),
+            ("../../evil", ".._.._evil"),
+            ("a\\b", "a_b"),
+            ("/etc", "_etc"),
+            ("C:", "C_"),
+            ("con", "_con"),
+            ("NUL.txt", "_NUL.txt"),
+            ("trailing.", "trailing._"),
+        ] {
+            assert_eq!(safe_component(id), expected, "sanitising {id:?}");
+        }
     }
 
     #[test]

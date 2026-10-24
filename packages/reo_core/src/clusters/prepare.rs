@@ -18,6 +18,10 @@ use reo_events::GroupedProgressSession;
 use reo_java::JavaRuntime;
 use reo_mc::MetadataStore;
 
+/// Installs still run one at a time two at once would download the same files
+/// into the same paths
+static INSTALL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 #[tracing::instrument(skip(state, shared_progress))]
 pub async fn prepare_cluster_locked(
     state: &Arc<LauncherState>,
@@ -27,10 +31,12 @@ pub async fn prepare_cluster_locked(
     auto_install_java: bool,
     shared_progress: Option<&GroupedProgressSession>,
 ) -> LauncherResult<Cluster> {
-    let mut metadata = state.metadata.lock().await;
-    prepare_cluster(
+    // Not the metadata lock that one is taken only while versions resolve so
+    // everything else reading it is not stuck behind the whole download
+    let _install = INSTALL.lock().await;
+    prepare_with(
         state,
-        &mut metadata,
+        None,
         cluster_id,
         force,
         search_for_java,
@@ -43,6 +49,28 @@ pub async fn prepare_cluster_locked(
 pub async fn prepare_cluster(
     state: &Arc<LauncherState>,
     metadata: &mut MetadataStore,
+    cluster_id: i64,
+    force: bool,
+    search_for_java: bool,
+    auto_install_java: bool,
+    shared_progress: Option<&GroupedProgressSession>,
+) -> LauncherResult<Cluster> {
+    prepare_with(
+        state,
+        Some(metadata),
+        cluster_id,
+        force,
+        search_for_java,
+        auto_install_java,
+        shared_progress,
+    )
+    .await
+}
+
+/// `None` locks the shared metadata just for as long as it is read
+async fn prepare_with(
+    state: &Arc<LauncherState>,
+    metadata: Option<&mut MetadataStore>,
     cluster_id: i64,
     force: bool,
     search_for_java: bool,
@@ -262,7 +290,7 @@ pub async fn estimate_cluster_download(
 #[tracing::instrument(skip(state, metadata, cluster, progress), fields(cluster_id = cluster.id))]
 async fn install_cluster(
     state: &Arc<LauncherState>,
-    metadata: &mut MetadataStore,
+    metadata: Option<&mut MetadataStore>,
     cluster: &Cluster,
     progress: &GroupedProgressSession,
     force: bool,
@@ -274,17 +302,27 @@ async fn install_cluster(
 
     let mc_version = reo_common::version::normalize_mc_version_input(&cluster.mc_version);
 
-    let (version, _version_index, minecraft_updated) =
-        resolve_minecraft_version(metadata, &state.services.mc(), &mc_version).await?;
+    let (version, minecraft_updated, loader_version) = {
+        let mut locked: Option<tokio::sync::MutexGuard<'_, MetadataStore>> = None;
+        let metadata = match metadata {
+            Some(metadata) => metadata,
+            None => &mut **locked.insert(state.metadata.lock().await),
+        };
 
-    let loader_version = get_loader_version(
-        metadata,
-        &state.services.mc(),
-        &mc_version,
-        cluster.mc_loader,
-        cluster.mc_loader_version.as_deref(),
-    )
-    .await?;
+        let (version, _version_index, minecraft_updated) =
+            resolve_minecraft_version(metadata, &state.services.mc(), &mc_version).await?;
+
+        let loader_version = get_loader_version(
+            metadata,
+            &state.services.mc(),
+            &mc_version,
+            cluster.mc_loader,
+            cluster.mc_loader_version.as_deref(),
+        )
+        .await?;
+
+        (version, minecraft_updated, loader_version)
+    };
 
     let mut version_info = download_version_info(
         &state.services.mc(),
@@ -302,22 +340,35 @@ async fn install_cluster(
         .map(|v| v.major_version)
         .ok_or(ClusterError::MissingJavaVersion)?;
 
-    let java = if let Some(runtime) = state
+    let java = match state
         .java
         .runtime_for_profile(profile.java_path.as_deref())
         .await?
     {
-        runtime
-    } else {
-        state
-            .java
-            .prepare(
-                java_major,
-                search_for_java,
-                auto_install_java,
-                Some(progress),
-            )
-            .await?
+        // A newer Java runs the game fine an older one dies on start with
+        // `UnsupportedClassVersionError`
+        Some(runtime) if runtime.major >= java_major => runtime,
+        configured => {
+            if let Some(runtime) = configured {
+                tracing::warn!(
+                    cluster_id = cluster.id,
+                    path = %runtime.absolute_path,
+                    configured = runtime.major,
+                    required = java_major,
+                    "configured Java is too old for this version; using a matching runtime"
+                );
+            }
+
+            state
+                .java
+                .prepare(
+                    java_major,
+                    search_for_java,
+                    auto_install_java,
+                    Some(progress),
+                )
+                .await?
+        }
     };
 
     let natives_mode = crate::game::natives::natives_mode(state, &version_info.id, None);

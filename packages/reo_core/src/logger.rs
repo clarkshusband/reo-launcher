@@ -212,22 +212,21 @@ pub fn init_filtered(filter: impl FnOnce() -> String) -> LauncherResult<()> {
 
     #[cfg(not(debug_assertions))]
     {
-        let logs_dir = reo_common::paths::logs_dir()?;
-        std::fs::create_dir_all(&logs_dir)?;
-
-        let log_path = logs_dir.join(format!(
-            "{}.log",
-            chrono::Local::now().to_rfc3339().replace(':', "-")
-        ));
-
-        let file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)?;
-
-        let file_layer = tracing_subscriber::fmt::layer()
-            .with_ansi(false)
-            .with_writer(file);
+        // A logs folder we cannot write to should not keep the launcher from starting
+        let (log_path, file_layer) = match open_log_file() {
+            Ok((path, file)) => (
+                Some(path),
+                Some(
+                    tracing_subscriber::fmt::layer()
+                        .with_ansi(false)
+                        .with_writer(file),
+                ),
+            ),
+            Err(err) => {
+                eprintln!("could not open a log file, logging to the terminal only: {err}");
+                (None, None)
+            }
+        };
 
         tracing_subscriber::registry()
             .with(filter)
@@ -237,8 +236,66 @@ pub fn init_filtered(filter: impl FnOnce() -> String) -> LauncherResult<()> {
             .with(sentry_layer)
             .init();
 
-        tracing::info!(path = %log_path.display(), "writing logs to file");
+        if let Some(log_path) = log_path {
+            tracing::info!(path = %log_path.display(), "writing logs to file");
+            prune_old_logs(&log_path);
+        }
     }
 
     Ok(())
+}
+
+/// Launcher logs kept on disk counting the one just opened
+#[cfg(not(debug_assertions))]
+const KEEP_LOGS: usize = 20;
+
+#[cfg(not(debug_assertions))]
+fn open_log_file() -> LauncherResult<(std::path::PathBuf, std::fs::File)> {
+    let logs_dir = reo_common::paths::logs_dir()?;
+    std::fs::create_dir_all(&logs_dir)?;
+
+    let log_path = logs_dir.join(format!(
+        "{}.log",
+        chrono::Local::now().to_rfc3339().replace(':', "-")
+    ));
+
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)?;
+
+    Ok((log_path, file))
+}
+
+/// Names start with the launch time so sorting by name puts the oldest first
+#[cfg(not(debug_assertions))]
+fn prune_old_logs(current: &std::path::Path) {
+    let Some(logs_dir) = current.parent() else {
+        return;
+    };
+    let Ok(entries) = std::fs::read_dir(logs_dir) else {
+        return;
+    };
+
+    let mut older: Vec<std::path::PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.as_path() != current)
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| {
+                    name.ends_with(".log") && name.starts_with(|c: char| c.is_ascii_digit())
+                })
+        })
+        .collect();
+
+    older.sort();
+    let excess = older.len().saturating_sub(KEEP_LOGS - 1);
+
+    for old in older.into_iter().take(excess) {
+        if let Err(err) = std::fs::remove_file(&old) {
+            tracing::warn!(path = %old.display(), %err, "could not remove an old launcher log");
+        }
+    }
 }

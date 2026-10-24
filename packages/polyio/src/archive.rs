@@ -26,6 +26,7 @@ fn entry_name(cdr: &CDR) -> Cow<'_, str> {
     String::from_utf8_lossy(cdr.insecure_file_name.as_bytes())
 }
 
+#[cfg(unix)]
 fn unix_permissions(cdr: &CDR) -> Option<u32> {
     (cdr.cdrh.v_made_by >> 8 == 3).then_some(cdr.cdrh.exter_attr >> 16)
 }
@@ -248,6 +249,14 @@ pub async fn read_zip_file_entries(
 
 pub const MAX_STREAMED_ENTRY_BYTES: u64 = 1024 * 1024 * 1024;
 
+/// The declared size comes from an untrusted header so only this much is
+/// reserved up front and the buffer grows with what actually decompresses
+const MAX_PREALLOCATED_ENTRY_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Ceiling on [`try_read_zip_entry_bytes`] whose callers read manifests and
+/// JSON indexes that sit far below it
+pub const MAX_MANIFEST_ENTRY_BYTES: u64 = 64 * 1024 * 1024;
+
 pub struct ZipEntryCursor {
     reader: FileZipReader,
     indices: std::collections::HashMap<String, usize>,
@@ -295,7 +304,9 @@ impl ZipEntryCursor {
         }
 
         let entry_reader = self.reader.file(index).await?;
-        let mut data = Vec::with_capacity(usize::try_from(declared).unwrap_or_default());
+        let mut data = Vec::with_capacity(
+            usize::try_from(declared.min(MAX_PREALLOCATED_ENTRY_BYTES)).unwrap_or_default(),
+        );
         futures_lite::AsyncReadExt::read_to_end(
             &mut futures_lite::AsyncReadExt::take(entry_reader, MAX_STREAMED_ENTRY_BYTES + 1),
             &mut data,
@@ -328,6 +339,8 @@ pub async fn zip_entry_names(zip_path: impl AsRef<std::path::Path>) -> PolyIORes
 }
 
 /// Returns a zip file entry's bytes without reading the entire file into memory
+///
+/// Entries claiming or producing more than [`MAX_MANIFEST_ENTRY_BYTES`] are an error
 #[tracing::instrument(level = "debug", skip(reader))]
 pub async fn try_read_zip_entry_bytes<R>(reader: R, file_name: &str) -> PolyIOResult<Vec<u8>>
 where
@@ -342,11 +355,30 @@ where
             file_name: file_name.to_string(),
         })?;
 
-    let mut entry_reader = zip_reader.file(index).await?;
+    let declared = zip_reader.cdrs()[index].uncompressed_size()?;
+    if declared > MAX_MANIFEST_ENTRY_BYTES {
+        return Err(IOError::IOError(std::io::Error::other(format!(
+            "'{file_name}' declares {declared} bytes, over the {MAX_MANIFEST_ENTRY_BYTES} byte limit"
+        ))));
+    }
 
-    let mut data: Vec<u8> = Vec::new();
+    let entry_reader = zip_reader.file(index).await?;
 
-    futures_lite::AsyncReadExt::read_to_end(&mut entry_reader, &mut data).await?;
+    let mut data: Vec<u8> = Vec::with_capacity(
+        usize::try_from(declared.min(MAX_PREALLOCATED_ENTRY_BYTES)).unwrap_or_default(),
+    );
+
+    futures_lite::AsyncReadExt::read_to_end(
+        &mut futures_lite::AsyncReadExt::take(entry_reader, MAX_MANIFEST_ENTRY_BYTES + 1),
+        &mut data,
+    )
+    .await?;
+
+    if data.len() as u64 > MAX_MANIFEST_ENTRY_BYTES {
+        return Err(IOError::IOError(std::io::Error::other(format!(
+            "'{file_name}' decompressed past the {MAX_MANIFEST_ENTRY_BYTES} byte limit"
+        ))));
+    }
 
     Ok(data)
 }
