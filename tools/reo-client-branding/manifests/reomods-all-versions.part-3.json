@@ -1,0 +1,833 @@
+﻿[
+    {
+        "slug":  "animations",
+        "projectId":  "4Hfmgaef",
+        "usedName":  "overflowanimations-5.0.8+1.21.11-fabric.jar",
+        "url":  "https://cdn.modrinth.com/data/4Hfmgaef/versions/dNgl1khs/overflowanimations-5.0.8%2B1.21.11-fabric.jar",
+        "sha1":  "b62560879a6a9f7feae1b87f197ec5bb8614f848",
+        "sha512":  "91141bea5a094b41542200604948185eb948b0f7271c685f5b62fd95e0e783dc9d83533ea093589199d6e2c56875a2b366a1e8c9def6f119f2507c08f6cd9699",
+        "fileSize":  1265574,
+        "outName":  "overflowanimations-5.0.8+1.21.11-fabric.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "animations",
+        "projectId":  "4Hfmgaef",
+        "usedName":  "overflowanimations-5.0.8+26.1.2-fabric.jar",
+        "url":  "https://cdn.modrinth.com/data/4Hfmgaef/versions/Nwew1bAx/overflowanimations-5.0.8%2B26.1.2-fabric.jar",
+        "sha1":  "535acd897ee4199d5d5440fa1ec97b2dc3fced03",
+        "sha512":  "3aae4651b6984cfe4372b850840494278d2f4277e1cbfa0710fcb9b625e7b8a3db5c864dc38e4ff4f8ae13dda0cd4f53105baea6a43c528cdd624580fcc769da",
+        "fileSize":  1267099,
+        "outName":  "overflowanimations-5.0.8+26.1.2-fabric.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "behindyou",
+        "projectId":  "sAFPANmp",
+        "usedName":  "behindyouv3-3.5.0+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/sAFPANmp/versions/URYJGk19/behindyouv3-3.5.0%2B1.21.11.jar",
+        "sha1":  "a3b6f4edf2bb311be41d820f4830670cb7c577fb",
+        "sha512":  "9e26b8e87d89461bd432ea188b7c59d7c8f25e3eb8ac7b6c7bf72babae7bced40719e6a88243b71becd0feffdeb366d47e37f0e327c80ed541a741c5a8ab7abb",
+        "fileSize":  51917,
+        "outName":  "behindyouv3-3.5.0+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "behindyou",
+        "projectId":  "sAFPANmp",
+        "usedName":  "behindyouv3-3.5.0+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/sAFPANmp/versions/Kmg0fwVY/behindyouv3-3.5.0%2B26.1.jar",
+        "sha1":  "cc459c873749157e977494cb7735b9213c28740b",
+        "sha512":  "e8816e409590d27730d6ce103c1db66bd88a4a6a30e4eb5852e9ab35929a1bd74564aa442ba5c69c4124ba3e8e8eaa3cfa5d72552776a85f086970c528c5341e",
+        "fileSize":  51200,
+        "outName":  "behindyouv3-3.5.0+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "chatting",
+        "projectId":  "8pJYUDNi",
+        "usedName":  "chatting-3.2.3+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/8pJYUDNi/versions/DKGIalbe/chatting-3.2.3%2B1.21.11.jar",
+        "sha1":  "080ed67e0f5ff986bc239bc218a6dd0f279878d3",
+        "sha512":  "2e5e4f50d2ca32b707f44cf1836659c3a1e10aa34f7978f855f6c2b6bd8edc98dbc45312bf47d38a718935e61f620f61920b68403b25e1c52fa92436a66bc331",
+        "fileSize":  252883,
+        "outName":  "chatting-3.2.3+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "chatting",
+        "projectId":  "8pJYUDNi",
+        "usedName":  "chatting-3.2.3+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/8pJYUDNi/versions/7GwnLMMa/chatting-3.2.3%2B26.1.jar",
+        "sha1":  "d0de1444f2258fe1e033d9951ad283c4a1c3bc7b",
+        "sha512":  "89e34e956aa3f47c38bb7bf615d73b050ee6472ac5f723911b2df5d468988f7cccb28dba95ace30f218cc1815260ba754dbaad37952fad1c05f94bce8c17e7be",
+        "fileSize":  250793,
+        "outName":  "chatting-3.2.3+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "chattweaks",
+        "projectId":  "8LNT47ZH",
+        "usedName":  "chattweaks-1.2.2+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/8LNT47ZH/versions/40wpzFAJ/chattweaks-1.2.2%2B1.21.11.jar",
+        "sha1":  "6dba8afa0c988197f772a2a2171b022504a6eb6b",
+        "sha512":  "23979be85ff773e54f3407866461588652aa9dfcb16631966f349a9af6219dc6016434d6f0fb2824b3ad8b79815e38c643d430658cfa5c1ed859e6ee5525ffb8",
+        "fileSize":  81192,
+        "outName":  "chattweaks-1.2.2+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "chattweaks",
+        "projectId":  "8LNT47ZH",
+        "usedName":  "chattweaks-1.2.2+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/8LNT47ZH/versions/ApDFi6o8/chattweaks-1.2.2%2B26.1.jar",
+        "sha1":  "e35eb8d1b1a2b01c6adf3c373ed1bcca8143745a",
+        "sha512":  "d12e15b38f7fea307eb9bed8ada72fd1b587aa11e13b1d7841cdcbf39472faae734fdbda0fafda470434aee8a4fdd5ce868f98d29953484fe24e98b73065fdf5",
+        "fileSize":  81054,
+        "outName":  "chattweaks-1.2.2+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "colorsaturation",
+        "projectId":  "fLNnSWgM",
+        "usedName":  "colorsaturation-1.3.0+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/fLNnSWgM/versions/TWv4KrBO/colorsaturation-1.3.0%2B1.21.11.jar",
+        "sha1":  "c2ba6655f93a83926b60e929ddde0053b50f20fc",
+        "sha512":  "e2d2753ddfa01e6b0a9ed0c9f9f4bbf4cf9af6086f04572ea3a4b9ba647b7c134b145c173b69875b3d7476f107434e73fe0b4075a4a43c4f2103be3da5a31d3f",
+        "fileSize":  38529,
+        "outName":  "colorsaturation-1.3.0+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "colorsaturation",
+        "projectId":  "fLNnSWgM",
+        "usedName":  "colorsaturation-1.3.0+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/fLNnSWgM/versions/HJOf5bXR/colorsaturation-1.3.0%2B26.1.jar",
+        "sha1":  "86aec5d902c9b8d4c7903d10174da99c28b7a63e",
+        "sha512":  "f582889f0592eff282b464dfb9599773f8ac351671cdecd99ba1dc5b1157327d96043fa2b7f82a9c8ebcde8a691805765d6b2555434e554a1d58aeec99ed455f",
+        "fileSize":  38792,
+        "outName":  "colorsaturation-1.3.0+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "crashpatch",
+        "projectId":  "nZ3E8WQz",
+        "usedName":  "CrashPatch-2.2.1+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/nZ3E8WQz/versions/noU4PYTp/CrashPatch-2.2.1%2B1.21.11.jar",
+        "sha1":  "5d911ca686550743c3cf7a21dab595b83a9899ae",
+        "sha512":  "8b50fa7325f92df61e12939a91e42627c297d494a8db128830afcb4d43988553f84a7027987ee6ab3d68f6b32d67f1cfda45d63894b8bedcdaec040c4a0c8558",
+        "fileSize":  227900,
+        "outName":  "CrashPatch-2.2.1+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "crashpatch",
+        "projectId":  "nZ3E8WQz",
+        "usedName":  "CrashPatch-2.2.1+26.1.2.jar",
+        "url":  "https://cdn.modrinth.com/data/nZ3E8WQz/versions/b9dqIioo/CrashPatch-2.2.1%2B26.1.2.jar",
+        "sha1":  "e11ae7e02dfbbad557c14e16be8a96c89624fbde",
+        "sha512":  "1e6dfc892aa722f1e8759a8cf3013a6cd019e1ee38e39e30752b74b1e53e07604a71e641d057a4fb7cce5035cff155cedbf1188c8f0e3e1ed3e098ca1258e2ff",
+        "fileSize":  225695,
+        "outName":  "CrashPatch-2.2.1+26.1.2.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "crosshair",
+        "projectId":  "obfJASPU",
+        "usedName":  "polycrosshair-2.0.4+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/obfJASPU/versions/87Z7vL10/polycrosshair-2.0.4%2B1.21.11.jar",
+        "sha1":  "f2212333cd064c008e4141d87747f9299e14047d",
+        "sha512":  "d054ae179e1b26ebd27cf618e40bb5515a088f24551d005582787883664177f4e66376dbd8cd94a0c756f849a5985cebff0ae585a60e0a4d409a84f748312605",
+        "fileSize":  224502,
+        "outName":  "reocrosshair-2.0.4+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "crosshair",
+        "projectId":  "obfJASPU",
+        "usedName":  "polycrosshair-2.0.4+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/obfJASPU/versions/U15yE2p2/polycrosshair-2.0.4%2B26.1.jar",
+        "sha1":  "c0ac29b8455377f8ff26ed93a9eea8d02be1fb0b",
+        "sha512":  "42b64a7c72901c76540e18f2e944ced7b0ec557877972ce07744c0384873fd9612d6f6ed181e80e91f5ef075780d07d6dce55291a668733a2889358d1bb38ab4",
+        "fileSize":  220619,
+        "outName":  "reocrosshair-2.0.4+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "damagetint",
+        "projectId":  "6zatK8W5",
+        "usedName":  "damagetint-3.7.2+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/6zatK8W5/versions/cfw7Y1UQ/damagetint-3.7.2%2B1.21.11.jar",
+        "sha1":  "82d4d3de773fd7c7eb4c4b02b8bbdda1b993c58e",
+        "sha512":  "9fa654fb2ff67f64fafe406a02df354619e3a46728ebe2f4bced788ef832d6c55e9783562d209ea7a3b37e1af989ea02c6dd26f12895b0ef70a4c2a0f053f542",
+        "fileSize":  26504,
+        "outName":  "damagetint-3.7.2+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "damagetint",
+        "projectId":  "6zatK8W5",
+        "usedName":  "damagetint-3.7.2+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/6zatK8W5/versions/AqsBfhYU/damagetint-3.7.2%2B26.1.jar",
+        "sha1":  "b1840f6bf6dbf955adeabb8dddbf177b76f5f8d7",
+        "sha512":  "92a3580e10ddb69b8f7e208ef5e8d6a6d279a8efd4c3891e259bb3e918938fd5cace2e1f7c41a69927eb90df424f55b79a8bc5cdcfd5344e0b47361be1fd1733",
+        "fileSize":  26524,
+        "outName":  "damagetint-3.7.2+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "evergreenhud",
+        "projectId":  "1yIQcc2b",
+        "usedName":  "evergreenhud-3.9.10+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/1yIQcc2b/versions/pqGRid4x/evergreenhud-3.9.10%2B1.21.11.jar",
+        "sha1":  "07eb380746c7783ea91c0438ae0526a50b6d9f7b",
+        "sha512":  "ae3a6ec6c81410645b61924de0b2783377a2ea764d8244e40e16d84efbac0125f6e30a828d62fee3d369b624b3e5088f15a32dcfa748fd83c88a5621c354a56b",
+        "fileSize":  755802,
+        "outName":  "evergreenhud-3.9.10+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "hud-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "evergreenhud",
+        "projectId":  "1yIQcc2b",
+        "usedName":  "evergreenhud-3.9.10+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/1yIQcc2b/versions/w17THeo9/evergreenhud-3.9.10%2B26.1.jar",
+        "sha1":  "8e60b514df29eedc604b0e1327b02c1f119177de",
+        "sha512":  "d85b11d9c3646b116f681607cc0189a329ae6d9f3b2e73f7b78eced3299b684103feaa212a5b556324344f4c229f7e7507e64e23634e6b3af90848af1570ee73",
+        "fileSize":  742085,
+        "outName":  "evergreenhud-3.9.10+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "hud-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "hitbox",
+        "projectId":  "Mptc0jo6",
+        "usedName":  "polyhitbox-1.3.2+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/Mptc0jo6/versions/Jgt2e5zN/polyhitbox-1.3.2%2B1.21.11.jar",
+        "sha1":  "db7c743ae90f321d82e2b99beadd57bfe1140d63",
+        "sha512":  "e75bd9ba069cb9cc1bc0bc987d47a7fd15aa659ec57d6d184ee39bfb7dbd3ec97720fa2be053ed36adc1dc828d34d03318a32e3b784892be6e34d610f29c457e",
+        "fileSize":  82133,
+        "outName":  "reohitbox-1.3.2+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "hitbox",
+        "projectId":  "Mptc0jo6",
+        "usedName":  "polyhitbox-1.3.2+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Mptc0jo6/versions/gRg3hh4Z/polyhitbox-1.3.2%2B26.1.jar",
+        "sha1":  "824fc7588642003bbd0f7c33fbec9e04bf26827e",
+        "sha512":  "09ad8c6b6b3778a92a07f89c81cef942e2e071645af9f99c44907f9b054a47c1cdec14d7d52c052f7b44730c1bb4813c463b2766756128810648b17d8b535439",
+        "fileSize":  80649,
+        "outName":  "reohitbox-1.3.2+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "oneconfig",
+        "projectId":  "AibBIVmj",
+        "usedName":  "OneConfig-1.21.11-fabric-1.4.3.jar",
+        "url":  "https://cdn.modrinth.com/data/AibBIVmj/versions/a7ENCdUk/OneConfig-1.21.11-fabric-1.4.3.jar",
+        "sha1":  "ded8d5ccd6a452b33d736f4534d99b5c13f6418b",
+        "sha512":  "cc922592b20f46962514c1746806be38e1f93fe8655cdcef5e99c2992af7e74fcc747c59c6583b52566802d352f6361c4c9e88c296efb2259365bf43eb88ed1d",
+        "fileSize":  12071252,
+        "outName":  "OneConfig-1.21.11-fabric-1.4.3.jar",
+        "name":  null,
+        "contact":  "discord",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "hud-1.21.11-fabric.mrpack",
+                        "performance-1.21.11-fabric.mrpack",
+                        "qol-1.21.11-fabric.mrpack",
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "nestedAuto":  true
+    },
+    {
+        "slug":  "oneconfig",
+        "projectId":  "AibBIVmj",
+        "usedName":  "OneConfig-26.1-fabric-1.4.3.jar",
+        "url":  "https://cdn.modrinth.com/data/AibBIVmj/versions/zAJe4H0p/OneConfig-26.1-fabric-1.4.3.jar",
+        "sha1":  "b1dc3a894bb1ab3935fb72dc5815289b9e819f1a",
+        "sha512":  "ead6ff3ff271d2bc274fc8d6d4c39b15fb085017be471b73f000ba26322ead3e9bb6f9e999cfb410faf35c2fa2b68d60e3922757b21dbe4de618509ac53ef2f4",
+        "fileSize":  12095592,
+        "outName":  "OneConfig-26.1-fabric-1.4.3.jar",
+        "name":  null,
+        "contact":  "discord",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "hud-26.1.2-fabric.mrpack",
+                        "performance-26.1.2-fabric.mrpack",
+                        "qol-26.1.2-fabric.mrpack",
+                        "skyblock-26.1.2-fabric.mrpack",
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "nestedAuto":  true
+    },
+    {
+        "slug":  "overflowparticles",
+        "projectId":  "61g97TVF",
+        "usedName":  "overflowparticles-1.2.4+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/61g97TVF/versions/QCjEWoQR/overflowparticles-1.2.4%2B1.21.11.jar",
+        "sha1":  "268e3cbbf1ace0181d9925dbb47d7bbbadff8cba",
+        "sha512":  "7b71e6b84f5a49850b49272fc5f4db75a0877aa2b25d1cab8df61a4a7465037dee94071321791d5620ad7fe8d6c9b58ccc28de759826d041f71d56db8ef51253",
+        "fileSize":  102405,
+        "outName":  "overflowparticles-1.2.4+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "overflowparticles",
+        "projectId":  "61g97TVF",
+        "usedName":  "overflowparticles-1.2.4+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/61g97TVF/versions/G4vfvtK7/overflowparticles-1.2.4%2B26.1.jar",
+        "sha1":  "2c2bc32803191366e17fcfdf7f26e477b0ba9479",
+        "sha512":  "b15b5f174b6fc38b108f119812c0d8a2d6642ca9a90d3c773d02aeeee900347eefb38bbb880315c6980a19c41e1e10c5366e4824e46f0398e71d8d72d3707d31",
+        "fileSize":  101498,
+        "outName":  "overflowparticles-1.2.4+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "polyblur",
+        "projectId":  "xT45UG5o",
+        "usedName":  "polyblur-2.2.7+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/xT45UG5o/versions/YL43zlXC/polyblur-2.2.7%2B1.21.11.jar",
+        "sha1":  "0033b8ee0f2047cb8c24b51d69e9017aab92fa93",
+        "sha512":  "6cf6009e6f97b3b4eb4b3c5713013d2bad4274985042112f23bd3cd8bd98c27c179774db23e7214b9a78f33d556edafcfc9c6ec6b6cfc91e92bef584f0dfa097",
+        "fileSize":  114860,
+        "outName":  "reoblur-2.2.7+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyblur",
+        "projectId":  "xT45UG5o",
+        "usedName":  "polyblur-2.2.7+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/xT45UG5o/versions/kQrE2Bmd/polyblur-2.2.7%2B26.1.jar",
+        "sha1":  "72adb07a366c03756d19939937c40032272d1703",
+        "sha512":  "a6ffc580756fa671e760c9efac3fed7bea1b29a0d9de23305cd7c63144d0ff974efd9525e16a9ddb72b4f0f9c865754eb833b2e3e24d2c392797afdc34d4f063",
+        "fileSize":  112953,
+        "outName":  "reoblur-2.2.7+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polynametag",
+        "projectId":  "HK3p7LMj",
+        "usedName":  "polynametag-1.2.4+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/HK3p7LMj/versions/ijVB02NI/polynametag-1.2.4%2B1.21.11.jar",
+        "sha1":  "d0acaf69f28974a367a06e532400a1cb5a97fd38",
+        "sha512":  "cc103fe8173d1434ae08b6b14391be714059dfaadc5040efcf4533d1d9e9c59b8bdcb062b1802a41c8c1cd40cf371b03dadbc00bcaa1334d4bacca3145f83f45",
+        "fileSize":  43197,
+        "outName":  "reonametag-1.2.4+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polynametag",
+        "projectId":  "HK3p7LMj",
+        "usedName":  "polynametag-1.2.4+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/HK3p7LMj/versions/Fip9NcnB/polynametag-1.2.4%2B26.1.jar",
+        "sha1":  "7022583a1550c3921008dbfea3c43e2ff47fd7df",
+        "sha512":  "7b9458fd16abd1601c7671a95f114af0310b27098e79f9d51425e9006dfcc8b943ae6be96b2f669345db23add740e2298f3451ea1d049a5fd14da01c1fd8d4b3",
+        "fileSize":  42405,
+        "outName":  "reonametag-1.2.4+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/VHgP8g2L/polyplus-1.3.10%2B1.21.11.jar",
+        "sha1":  "2c89fa99997c39e457b4ebea69779bb535d0f3f0",
+        "sha512":  "fdd359e7b32215f65986708d6c51994f4997ddf6bf63221fb444b3e19c66ea0c2280d3f6f64f5995904ef2cb4e7e0ff77f529b458ecd4b248ebf2ca1f5836c9e",
+        "fileSize":  79643780,
+        "outName":  "reoplus-1.3.10+1.21.11.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/1hwXPCFT/polyplus-1.3.10%2B26.1.jar",
+        "sha1":  "fbfccb11331ca90929233d378b98025b4138216a",
+        "sha512":  "8097ba2fe811bef1b05225733e02abc8114fdc714799a717f6463651f52dc330ab4b2f79de21fc5b1f6e204df56d55bb7c5a89b0337e995b58f733a462011aee",
+        "fileSize":  85241671,
+        "outName":  "reoplus-1.3.10+26.1.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polysprint",
+        "projectId":  "i9xRThb3",
+        "usedName":  "polysprint-1.3.2+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/i9xRThb3/versions/ANhG20Px/polysprint-1.3.2%2B1.21.11.jar",
+        "sha1":  "ac060680f295f2a1126ce4d197c61fba74583550",
+        "sha512":  "06867312b3bc2c6f6dbe397bac24bebb080d35b2823e9cb78a377b4dba069f8b5d95588551f5ae3b7040da94b94b81ec36d927c9c0a55fd3e317ede5dccb059a",
+        "fileSize":  66546,
+        "outName":  "reosprint-1.3.2+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polysprint",
+        "projectId":  "i9xRThb3",
+        "usedName":  "polysprint-1.3.2+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/i9xRThb3/versions/8K7QZpFX/polysprint-1.3.2%2B26.1.jar",
+        "sha1":  "72e84dc0b12644354af7ffe48a75a00eaa002dbd",
+        "sha512":  "90994c2e9821caeba6115c96faaf19e867b70583d8254a1a96c7b787488a97a6a260a6f96a53f7f4ac935c00bb600271fc098bbc0f2990458e3577991794a8a1",
+        "fileSize":  66066,
+        "outName":  "reosprint-1.3.2+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polytime",
+        "projectId":  "m3kNp1iP",
+        "usedName":  "polytime-1.3.2+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/m3kNp1iP/versions/rxMDOAUS/polytime-1.3.2%2B1.21.11.jar",
+        "sha1":  "687f59d248030f290fad7d4e43b2e87fca744b3b",
+        "sha512":  "eaa3143a7359b91f37129026f07b9147f0f6aae03194e4fff8b04ca6bcc46d4939f320d3c8465b3f67f7302091addadbf1b8279422617fa854df3f2cd8845d4c",
+        "fileSize":  94533,
+        "outName":  "reotime-1.3.2+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polytime",
+        "projectId":  "m3kNp1iP",
+        "usedName":  "polytime-1.3.2+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/m3kNp1iP/versions/REmnlP91/polytime-1.3.2%2B26.1.jar",
+        "sha1":  "667b59341a3b4ce0a0cb894e69c7dd3abbdfd379",
+        "sha512":  "28d80a37e1af1281d18c73aea13aaa52d522eee462a2fa6509892984954f2dd1a13b1eeecc8714792190cb6aa067395bb9ed401490ea86688f16985874040415",
+        "fileSize":  93068,
+        "outName":  "reotime-1.3.2+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyweather",
+        "projectId":  "r8Cr8YRg",
+        "usedName":  "polyweather-1.3.0+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/r8Cr8YRg/versions/AKMdEANH/polyweather-1.3.0%2B1.21.11.jar",
+        "sha1":  "446855b3913629d7aac4360d1a13743600a04434",
+        "sha512":  "7ab216a3cd53b849c7891bf57a935e747abc4b5cfc8379fc8b90e6cab50b1049f898cb813bd448c5697990da06cf808e072ba86262226885110d03ee1d2fca30",
+        "fileSize":  49998,
+        "outName":  "reoweather-1.3.0+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyweather",
+        "projectId":  "r8Cr8YRg",
+        "usedName":  "polyweather-1.3.0+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/r8Cr8YRg/versions/x2THenPv/polyweather-1.3.0%2B26.1.jar",
+        "sha1":  "52e6e977cc4f278801fa5da00e5751b6b8853ba9",
+        "sha512":  "b090dbd0b55d7fda04e6a49391e2b1cee370d25c170277c837a3b195f0ebe55245299ed473463ba47359d566d611a519c8743b8a8329cd7ff2a74aabb2d07cd2",
+        "fileSize":  49655,
+        "outName":  "reoweather-1.3.0+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "redaction",
+        "projectId":  "Gapz72zt",
+        "usedName":  "REDACTION-2.1.1+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/Gapz72zt/versions/2KOhf6iY/REDACTION-2.1.1%2B1.21.11.jar",
+        "sha1":  "88ffd3c8aec6656923d28553d41ab5d6189ec14f",
+        "sha512":  "a1072c28db9ecae19ee85e9add4cd022e5f430a2f91a88af20a3238735f7177199299ac21c944d6f9aa8531b421143f5f08255dbbd6e15ff8de44b0978d64c8b",
+        "fileSize":  61993,
+        "outName":  "REDACTION-2.1.1+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "redaction",
+        "projectId":  "Gapz72zt",
+        "usedName":  "REDACTION-2.1.1+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Gapz72zt/versions/ww1oh9jZ/REDACTION-2.1.1%2B26.1.jar",
+        "sha1":  "62ae5d7885e2a0cf60d429e7f38e844eb10b3fd3",
+        "sha512":  "78e7a68f7ceed69d48093df3cfab0fe27007fe53d482e37ce6b70e33b77f54fe7fdc074ff8d50102e7afd940df2b4a761b9a12d3830aaa10819d25faffc9c317",
+        "fileSize":  61541,
+        "outName":  "REDACTION-2.1.1+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "soundtweaks",
+        "projectId":  "7hJZhArg",
+        "usedName":  "soundtweaks-1.0.1+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/7hJZhArg/versions/CttFi42H/soundtweaks-1.0.1%2B1.21.11.jar",
+        "sha1":  "7f8c56d2efceaec592b52bd37a9a01bd001c0375",
+        "sha512":  "a8af3f724cf5af6a638b9d69203c1b4adf4fe1773ed7beed3421f1957ff58d6acaf5a0a8c08932055ff95968d2db74985f838e285a4153815dceb911db9d9dae",
+        "fileSize":  23672,
+        "outName":  "soundtweaks-1.0.1+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "utility-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "soundtweaks",
+        "projectId":  "7hJZhArg",
+        "usedName":  "soundtweaks-1.0.1+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/7hJZhArg/versions/Lx72uWVU/soundtweaks-1.0.1%2B26.1.jar",
+        "sha1":  "8c45396872d68991f0fe68ca4c12279bd25a0e4f",
+        "sha512":  "6ff3efb423f6c27a852c8e3ead2cb8b5f182c3e1c0a21e10fcb64b4054040a1cdf57dbd76af620aa02668f16cc5995e061241161f84c58d42db94b36aac47960",
+        "fileSize":  23570,
+        "outName":  "soundtweaks-1.0.1+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "utility-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "vanillahud",
+        "projectId":  "pWXJaKrX",
+        "usedName":  "vanillahud-3.5.9+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/pWXJaKrX/versions/vx4e8JKz/vanillahud-3.5.9%2B1.21.11.jar",
+        "sha1":  "ab951f945703ad375bd704d74a3e44a970f7a1c1",
+        "sha512":  "d99c422ed60faf204d73ad7de9472a69b1c962ef5c546265c893d9633a816de600419f3230ccaa05ac41f6c2b7d39fc9b4e466382573116ed48bd81048e36fb3",
+        "fileSize":  250973,
+        "outName":  "vanillahud-3.5.9+1.21.11.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "hud-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3
+    },
+    {
+        "slug":  "vanillahud",
+        "projectId":  "pWXJaKrX",
+        "usedName":  "vanillahud-3.5.9+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/pWXJaKrX/versions/FYrn3ddG/vanillahud-3.5.9%2B26.1.jar",
+        "sha1":  "21261161bf8b0c529484003e8e170631206b60ae",
+        "sha512":  "2c0fcb59b3ff2764784324905abc03811c66a848f8c521d2114f0e59124c7d985c20ff147e7493ec393696e5e5fc08a089d4fed071936b91c8bf6cbb76c7ba8f",
+        "fileSize":  248653,
+        "outName":  "vanillahud-3.5.9+26.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "hud-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3
+    }
+]

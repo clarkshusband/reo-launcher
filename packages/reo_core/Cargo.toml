@@ -1,0 +1,97 @@
+[package]
+authors.workspace = true
+description = "Reo Launcher core"
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "reo_core"
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+
+[dev-dependencies]
+async-tungstenite = {version = "=0.35.0", features = ["tokio-runtime"]}
+polyio = {workspace = true, features = ["testing"]}
+
+[dependencies]
+# core (extra)
+discord-rich-presence.workspace = true
+interfrost.workspace = true
+reo_auth.workspace = true
+reo_cluster.workspace = true
+reo_common.workspace = true
+reo_content.workspace = true
+reo_db.workspace = true
+reo_discord.workspace = true
+reo_events.workspace = true
+reo_java.workspace = true
+reo_mc.workspace = true
+reo_net.workspace = true
+reo_polyplus.workspace = true
+polyio.workspace = true
+
+# logging
+tracing-futures.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+
+sentry-tracing.workspace = true
+sentry.workspace = true
+
+# database
+sqlx.workspace = true
+
+# async
+async-compression.workspace = true
+async-stream.workspace = true
+async-tempfile.workspace = true
+async-trait.workspace = true
+async_zip.workspace = true
+futures-lite.workspace = true
+futures-util = {workspace = true, features = ["std", "sink"]}
+reqwest-websocket.workspace = true
+reqwest.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tokio.workspace = true
+
+# util (codegen/macro)
+regex.workspace = true
+serde_repr.workspace = true
+strum.workspace = true
+thiserror.workspace = true
+
+# crypto
+digest.workspace = true
+md-5.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+
+# util
+base64.workspace = true
+bytes.workspace = true
+chrono.workspace = true
+directories.workspace = true
+dunce.workspace = true
+htmd.workspace = true
+image.workspace = true
+indicatif.workspace = true
+parking_lot.workspace = true
+rand.workspace = true
+sanitize-filename.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
+trash.workspace = true
+url.workspace = true
+uuid.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc.workspace = true

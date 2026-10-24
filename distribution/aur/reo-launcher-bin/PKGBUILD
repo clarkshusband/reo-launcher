@@ -1,0 +1,37 @@
+# Maintainer: Polyfrost <contact@atmofrost.org>
+pkgname=reo-launcher-bin
+_appname=ReoLauncher
+pkgver=2.0.1
+pkgrel=1
+pkgdesc="Next-generation open source Minecraft launcher (prebuilt)"
+arch=('x86_64')
+url="https://github.com/drako1k/reo-launcher"
+license=('GPL-3.0-only')
+depends=(
+  'fontconfig'
+  'freetype2'
+  'libglvnd'
+  'libxcursor'
+  'libxrandr'
+  'libxi'
+  'libxkbcommon'
+  'wayland'
+  'dbus'
+  'gtk3'
+  'libayatana-appindicator'
+)
+provides=('reo-launcher')
+conflicts=('reo-launcher')
+options=('!strip')
+_debfile="${_appname}_${pkgver}_linux_x86_64.deb"
+source=("${_debfile}::${url}/releases/download/reo-launcher-${pkgver}/${_debfile}")
+sha256sums=('SKIP')
+
+package() {
+  cd "$pkgdir"
+  bsdtar -xf "$srcdir/$_debfile"
+  bsdtar -xf data.tar.*
+  rm -f debian-binary control.tar.* data.tar.*
+
+  ln -s reo-launcher_app "$pkgdir/usr/bin/reo-launcher"
+}

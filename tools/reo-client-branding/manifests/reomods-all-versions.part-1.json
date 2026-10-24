@@ -1,0 +1,573 @@
+﻿[
+    {
+        "slug":  "animations",
+        "projectId":  "4Hfmgaef",
+        "usedName":  "overflowanimations-5.0.8+1.8.9-fabric.jar",
+        "url":  "https://cdn.modrinth.com/data/4Hfmgaef/versions/jaf3qrCK/overflowanimations-5.0.8%2B1.8.9-fabric.jar",
+        "sha1":  "740eb832f626ff5939edbb5e3eaf218c652c2d00",
+        "sha512":  "ca05a486147e8edb4c4b959cfef6f1d94d0a2654d887fd24f090a1d77ff7df99a7ae4f9a07a1c6b6d73fcf9f0e13539f2292f288326c2bb8e86c7a99a127c7b2",
+        "fileSize":  472641,
+        "outName":  "overflowanimations-5.0.8+1.8.9-fabric.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "behindyou",
+        "projectId":  "sAFPANmp",
+        "usedName":  "behindyouv3-3.5.0+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/sAFPANmp/versions/LA4xblvd/behindyouv3-3.5.0%2B1.8.9.jar",
+        "sha1":  "ae154af3af313c93d4c3dc59d5bdde5bc850de5e",
+        "sha512":  "5d1eba76c992bc676640ba479837b7632d5364ef1501f6b02527fdbe090cd9588cc6d7efdcb9a0bdefc449f151a14078ce13eaa4c436e98590a7611bc3b9aa89",
+        "fileSize":  60282,
+        "outName":  "behindyouv3-3.5.0+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "chatting",
+        "projectId":  "8pJYUDNi",
+        "usedName":  "chatting-3.2.3+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/8pJYUDNi/versions/uXuuvvYq/chatting-3.2.3%2B1.8.9.jar",
+        "sha1":  "abcf922ca41b4fb1f6eaf6d9457bf5dc9117f5b2",
+        "sha512":  "cd9e1a607115fbf2dd6f2e168473a9b0904ccd078896024b1a62f7983eee2296ffd2425722b4a1d12911cbf974a082282abfe7df4b369c265b9e117f908d17c1",
+        "fileSize":  247861,
+        "outName":  "chatting-3.2.3+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "chattweaks",
+        "projectId":  "8LNT47ZH",
+        "usedName":  "chattweaks-1.2.2+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/8LNT47ZH/versions/Fycmy9km/chattweaks-1.2.2%2B1.8.9.jar",
+        "sha1":  "ea9e759cef7ea00b2ccbb953a501492692d377b7",
+        "sha512":  "c837fd6b536038fd48e278e44f639013f9228f25ea12c2eeafc195005368286a7f5536bca7a6e9c01f7708009cea42d95459cc39b1aa45b06bfcb998ab7d5e0e",
+        "fileSize":  84752,
+        "outName":  "chattweaks-1.2.2+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "colorsaturation",
+        "projectId":  "fLNnSWgM",
+        "usedName":  "colorsaturation-1.3.0+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/fLNnSWgM/versions/OKY0cEE7/colorsaturation-1.3.0%2B1.8.9.jar",
+        "sha1":  "57b62543de7994d3ede8ecb331762afdfe17c0ad",
+        "sha512":  "4d222c65d8609f1bc91ada6bd582da3291c69b0bc242d3ff3a151a1c01400da214b3e86b4a1529bec3b3950ceae416e8660fd68126aa586a59b98a1eb4c778cc",
+        "fileSize":  32838,
+        "outName":  "colorsaturation-1.3.0+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "compose-multiplatform",
+        "projectId":  "eHe8QhtD",
+        "usedName":  "compose-bundle-1.0.6+compose.1.13.0-alpha02-ornithe.jar",
+        "url":  "https://cdn.modrinth.com/data/eHe8QhtD/versions/aQmt5aNV/compose-bundle-1.0.6%2Bcompose.1.13.0-alpha02-ornithe.jar",
+        "sha1":  "99efc7ac2b796de2e0b66556b552661618d09113",
+        "sha512":  "c1e97fc46b5b12572a59e931275be37d0dd257aa507db291022050d7ccd0f2fc74c397a841cec2a150d8cca12251a6fd57ddedfa121fee2a0e6d81047f5c1c01",
+        "fileSize":  65457828,
+        "outName":  "compose-bundle-1.0.6+compose.1.13.0-alpha02-ornithe.jar",
+        "name":  null,
+        "contact":  "discord",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "hud-1.8.9-ornithe.mrpack",
+                        "performance-1.8.9-ornithe.mrpack",
+                        "qol-1.8.9-ornithe.mrpack",
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "crashpatch",
+        "projectId":  "nZ3E8WQz",
+        "usedName":  "CrashPatch-2.2.1+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/nZ3E8WQz/versions/y4sBp0pI/CrashPatch-2.2.1%2B1.8.9.jar",
+        "sha1":  "cc703c355af5ccbdbe18e27a9becee126e8de109",
+        "sha512":  "099f59a37ee80c6bc711e96c0a3dbbc9ebda085122209402616138e738b3c5c167cf7fa93c61bd0f5653687dde882b1993116db0e24df44f601d53839193c073",
+        "fileSize":  840041,
+        "outName":  "CrashPatch-2.2.1+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "crosshair",
+        "projectId":  "obfJASPU",
+        "usedName":  "polycrosshair-2.0.4+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/obfJASPU/versions/sBeOwfx5/polycrosshair-2.0.4%2B1.8.9.jar",
+        "sha1":  "ba81b5b6d119e23510d93d6caa568470fe32986f",
+        "sha512":  "e8407179aa8f867df5650f58154e63551553237af2df30ae6492ef6b8d1bb313a3414eda2475682cb0861572c6a3eefabf4585934761614f010b1584ff7f7715",
+        "fileSize":  209261,
+        "outName":  "reocrosshair-2.0.4+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "damagetint",
+        "projectId":  "6zatK8W5",
+        "usedName":  "damagetint-3.7.2+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/6zatK8W5/versions/2q3F291F/damagetint-3.7.2%2B1.8.9.jar",
+        "sha1":  "2b741162c30b1fafd8eb3523ac372c563c6d6e8d",
+        "sha512":  "6dffc86e6126e220a2c6d7aaa78ebdecc58687f00100280d7792e8975aec1da614f7a60ba831185ee2161228061b823e936a13532b543f1650287f4c8be68d14",
+        "fileSize":  25272,
+        "outName":  "damagetint-3.7.2+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "evergreenhud",
+        "projectId":  "1yIQcc2b",
+        "usedName":  "evergreenhud-3.9.10+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/1yIQcc2b/versions/y2Ciz9Ry/evergreenhud-3.9.10%2B1.8.9.jar",
+        "sha1":  "c1c1303f2ab978d2aaca7d512c0b4706fed0c2e0",
+        "sha512":  "87f47adf071d6415bd9ae97b56117d67d2270dac4bb6cfd330c258efe871fb1a21ef54864bb5fb411484ed28df09208c40e03bae4ddfaef304960f554d5fcc79",
+        "fileSize":  749269,
+        "outName":  "evergreenhud-3.9.10+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "hud-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "glintcolorizer",
+        "projectId":  "SevsTfWN",
+        "usedName":  "glintcolorizer-3.0.1+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/SevsTfWN/versions/HPOAvgJ5/glintcolorizer-3.0.1%2B1.8.9.jar",
+        "sha1":  "263a51011826ab08b6cf64b52cc0c6cbe78f1d94",
+        "sha512":  "34d32d5a6d33a8339665508c8162f2302a75b4b32d4031aee481dc67c32cc1c05a994cab65fdb176a2d02d21c68bb57f4fc2affbc5072f0a87dfc1bad73940fd",
+        "fileSize":  49126,
+        "outName":  "glintcolorizer-3.0.1+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "hitbox",
+        "projectId":  "Mptc0jo6",
+        "usedName":  "polyhitbox-1.3.2+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/Mptc0jo6/versions/WK4a7MIk/polyhitbox-1.3.2%2B1.8.9.jar",
+        "sha1":  "c4a9519b7c5f3f400939d3f8e43b0da7b9d45a7a",
+        "sha512":  "a8f439e75b79ad4b59e79a9c91fb35a1ead75a954658d7211ce5590e10b05deb864132c4ce2f87dbaecb47ad790c1d2da0c17bd67104d073b4762149711d3976",
+        "fileSize":  89316,
+        "outName":  "reohitbox-1.3.2+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "legacydynamicfps",
+        "projectId":  "rCItxJku",
+        "usedName":  "dynamic-fps-1.0.0.jar",
+        "url":  "https://cdn.modrinth.com/data/rCItxJku/versions/DpiAzkoT/dynamic-fps-1.0.0.jar",
+        "sha1":  "4b7de672ca2ec46b8a8e20862dd635ae025702eb",
+        "sha512":  "cdb102401ef2700d6df415a03a18dec98ea2100f3ed53a931c718d208b7e301e8dea148a20697c576929484c3eee0a42af19be85d9424da73d62ab326a60eead",
+        "fileSize":  196953,
+        "outName":  "dynamic-fps-1.0.0.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "performance-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "legacyskinlayers",
+        "projectId":  "Ni3Wk7yd",
+        "usedName":  "LegacySkinLayers-1.0.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Ni3Wk7yd/versions/FtcyuO6E/LegacySkinLayers-1.0.1.jar",
+        "sha1":  "464768a9db5dda5395434a5bc2a747d428fd27ad",
+        "sha512":  "f0d07fedce756f70f0d6a7ab160a7839bb9336f1a1c749e12dad7a71dc0160df8a430fc507a3680ec4040743ac291ee1b8735cdb35177e781de42bed85def78b",
+        "fileSize":  81401,
+        "outName":  "LegacySkinLayers-1.0.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "legacytooltipscroll",
+        "projectId":  "krmfSula",
+        "usedName":  "Tooltip-Scroll-Ornithe-1.0.0.jar",
+        "url":  "https://cdn.modrinth.com/data/krmfSula/versions/pyswoLxP/Tooltip-Scroll-Ornithe-1.0.0.jar",
+        "sha1":  "96f9e29f1caef276e344ec47d6f0fdde6b9c6581",
+        "sha512":  "3d5f8c7b522c8b2ad1844a44ccdc006b9fea9a1cd7e3bba7c060f87730ab2fd27014f7b3b560e95372f927fe1d55b0edebf45c837146d591d592de1c4624f143",
+        "fileSize":  26441,
+        "outName":  "Tooltip-Scroll-Ornithe-1.0.0.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "legacywaveycapes",
+        "projectId":  "Hmd9emlf",
+        "usedName":  "LegacyWaveyCapes-1.0.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Hmd9emlf/versions/SGUMDDh1/LegacyWaveyCapes-1.0.1.jar",
+        "sha1":  "9c731446e86494cf6a12b07da88c79602716c32a",
+        "sha512":  "6a0461e2bb59ebdfa91a52f61cafcb4ba6054a93ae83915898a584824afcb68c034a21c7ae748772313f684c4c508a6af31f8debe101a34b5bb8f4822ccbb09b",
+        "fileSize":  81080,
+        "outName":  "LegacyWaveyCapes-1.0.1.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "oneconfig",
+        "projectId":  "AibBIVmj",
+        "usedName":  "OneConfig-1.8.9-ornithe-1.4.3.jar",
+        "url":  "https://cdn.modrinth.com/data/AibBIVmj/versions/HdtVcg2L/OneConfig-1.8.9-ornithe-1.4.3.jar",
+        "sha1":  "dea14df770037e68ff6ca0fe730c314e46f6fbf0",
+        "sha512":  "f4d5cbecaa5a9c3525ebb187229a02707994e521891267c548972be1475eb7b364daefefec73fa410affb3207040d453f22a438e97d00effc6884b90d5f044a4",
+        "fileSize":  10609707,
+        "outName":  "OneConfig-1.8.9-ornithe-1.4.3.jar",
+        "name":  null,
+        "contact":  "discord",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "hud-1.8.9-ornithe.mrpack",
+                        "performance-1.8.9-ornithe.mrpack",
+                        "qol-1.8.9-ornithe.mrpack",
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "nestedAuto":  true
+    },
+    {
+        "slug":  "overflowparticles",
+        "projectId":  "61g97TVF",
+        "usedName":  "overflowparticles-1.2.4+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/61g97TVF/versions/f6YKb5JF/overflowparticles-1.2.4%2B1.8.9.jar",
+        "sha1":  "0997c6025d08598457ecf7fb33d5aa86badfdd6f",
+        "sha512":  "405ef2e876d7e25a406e7a59d38cf7d195dfe4391aa510729a9344a76b9ebdd6d7e66047e3848e5d58554b6a5657f50570191d516a411d968cf00353b2fb79ad",
+        "fileSize":  102143,
+        "outName":  "overflowparticles-1.2.4+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "polyblur",
+        "projectId":  "xT45UG5o",
+        "usedName":  "polyblur-2.2.7+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/xT45UG5o/versions/NRJcBqCy/polyblur-2.2.7%2B1.8.9.jar",
+        "sha1":  "b0afb11f2212b554a8587b78dbd721448c40632d",
+        "sha512":  "429d1f7df5de9ef2171142389482651b113341bd254d7c970650a93bcc81ac62ac5db7422a17d9a0cda13b716d7abfe7cc5aa88434dc45ba73afa8a63c7ecc99",
+        "fileSize":  62503,
+        "outName":  "reoblur-2.2.7+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polynametag",
+        "projectId":  "HK3p7LMj",
+        "usedName":  "polynametag-1.2.4+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/HK3p7LMj/versions/kDxt8XFM/polynametag-1.2.4%2B1.8.9.jar",
+        "sha1":  "453741e76648bf126ea6416a92ca6a85e6fcfc91",
+        "sha512":  "797d3b79153ae65abbc7ec668fdc4e021f537c8eed8d00bd9b6dd45c4e6555684dac85ba2765d282c13d254203030675d0032b39d69340a09ce3d1a7bceec72e",
+        "fileSize":  43323,
+        "outName":  "reonametag-1.2.4+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/mylSoXxE/polyplus-1.3.10%2B1.8.9.jar",
+        "sha1":  "88a3ff92c23ad4d7c59a3b0599d34cc1b5a9069e",
+        "sha512":  "66976dac197fbf023f43113a214253dacb24d3837566bb144fa9ec6740a69dd0124ed9d0fe6e3a442e403b03c2baa0c27baafd528c0417a3d38460abf0601711",
+        "fileSize":  55422645,
+        "outName":  "reoplus-1.3.10+1.8.9.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polysprint",
+        "projectId":  "i9xRThb3",
+        "usedName":  "polysprint-1.3.2+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/i9xRThb3/versions/9pgcZD8H/polysprint-1.3.2%2B1.8.9.jar",
+        "sha1":  "e234afa5498ac6a5b5a986f2d547ad3761b31b8d",
+        "sha512":  "a30c7762d387e446f2d082dd6232014cd5561bfcf9b9fee2fa8cbecd2a6241a115a9d694b794ba7aead3e58008f15a7df5ee1001e26294ebb1f89268ba5b4380",
+        "fileSize":  63890,
+        "outName":  "reosprint-1.3.2+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polytime",
+        "projectId":  "m3kNp1iP",
+        "usedName":  "polytime-1.3.2+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/m3kNp1iP/versions/gQAQDrC5/polytime-1.3.2%2B1.8.9.jar",
+        "sha1":  "71cde39ab7bf10cf2cb21e15d07ce7eabfa1920b",
+        "sha512":  "bc651eccb7b873a73a713a536098895b7a5245114f0fdd0980b06e401ceb8afae28a387d94b808b5d7f90da957807fb279314beab92a13ba01aa0c1fb2799c16",
+        "fileSize":  94710,
+        "outName":  "reotime-1.3.2+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyweather",
+        "projectId":  "r8Cr8YRg",
+        "usedName":  "polyweather-1.3.0+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/r8Cr8YRg/versions/KymIUFkz/polyweather-1.3.0%2B1.8.9.jar",
+        "sha1":  "86d2f465687f066bb41dee8b4e938c417e879f19",
+        "sha512":  "aa8dd96a6416f33810c741b040de514031b0ab4e337fcb8b6c1099ae517f7a38805d1227583f928ce454052445bf99e2ea14e03a19883ed5e282e95877953959",
+        "fileSize":  49814,
+        "outName":  "reoweather-1.3.0+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "polyzoom",
+        "projectId":  "KRkUREPv",
+        "usedName":  "PolyZoom-1.0.3.jar",
+        "url":  "https://cdn.modrinth.com/data/KRkUREPv/versions/K8JEvM6g/PolyZoom-1.0.3.jar",
+        "sha1":  "2bf38bdb417a622fc5ae6ad726295454b0b03782",
+        "sha512":  "579d6e0c581bd30a50df0164aaa34d44f4fe45b9d37f1f3b7bc8d16c71da1d7891cab3bcce447b66292ae8bee45d4712e67bcab7eb29d8a0352dba1fee868534",
+        "fileSize":  18062,
+        "outName":  "ReoZoom-1.0.3.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "autoPolyName":  true
+    },
+    {
+        "slug":  "redaction",
+        "projectId":  "Gapz72zt",
+        "usedName":  "REDACTION-2.1.1+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/Gapz72zt/versions/YLxIDPkO/REDACTION-2.1.1%2B1.8.9.jar",
+        "sha1":  "c863f1114a3a6460224821645290de3e089cbf3c",
+        "sha512":  "0c466b653dd383d5c497a2aeae52d22033c940b30d3eb53900af8553ebe2eac735efe4b3ebe8ac17e6b87b857948315b376008acaacbf05f6cfc580e11e311d8",
+        "fileSize":  52660,
+        "outName":  "REDACTION-2.1.1+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "smartsearch",
+        "projectId":  "N5EQhK31",
+        "usedName":  "smartsearch-1.2.1-ornithe.jar",
+        "url":  "https://cdn.modrinth.com/data/N5EQhK31/versions/RrrjV1dv/smartsearch-1.2.1-ornithe.jar",
+        "sha1":  "7a81af41a06363e9fe451efe24c651627a889a50",
+        "sha512":  "601bf5ab090f96243293611ed2258b3974f76fbc5d4a167cdcad0d617bef8edc6691af73d6a710ddbc6d98b632316d5a62f18d7133fa53249414d9f589984877",
+        "fileSize":  63205575,
+        "outName":  "smartsearch-1.2.1-ornithe.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "soundtweaks",
+        "projectId":  "7hJZhArg",
+        "usedName":  "soundtweaks-1.0.1+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/7hJZhArg/versions/7wlBZEVA/soundtweaks-1.0.1%2B1.8.9.jar",
+        "sha1":  "ffb4d845235d5638f669cd708d38571a87d70440",
+        "sha512":  "1b240ccde12288a330afe4ca065fb944fbc76126a35d97eb1d70b8c1c61167dda5d983855bcb24cd6e01f28fe5bf1b1cec680989dcc1fd709780127b42dfef3a",
+        "fileSize":  24875,
+        "outName":  "soundtweaks-1.0.1+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "utility-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    },
+    {
+        "slug":  "vanillahud",
+        "projectId":  "pWXJaKrX",
+        "usedName":  "vanillahud-3.5.9+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/pWXJaKrX/versions/Tx46oWu8/vanillahud-3.5.9%2B1.8.9.jar",
+        "sha1":  "128d7218ac06ccc464a85168c21f745ac1217152",
+        "sha512":  "288b104de0b12e4f9e91b91f3c2c37df8c8da7540006ce92505cadbb13076ea8824cc53d02507d9105cf4da7191caa683408be728a219c1ba58cb48fc1a1d509",
+        "fileSize":  222545,
+        "outName":  "vanillahud-3.5.9+1.8.9.jar",
+        "name":  null,
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "hud-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1
+    }
+]

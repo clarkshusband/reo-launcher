@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "servers": [
+    {
+      "id": "reomc",
+      "name": "ReoMC",
+      "address": "mc.reomc.qzz.io",
+      "outline_color": "#5187F1",
+      "featured": {
+        "campaign_id": "reomc",
+        "starts_at": "2026-01-01T00:00:00Z",
+        "ends_at": "2031-01-01T00:00:00Z",
+        "title": "ReoMC",
+        "description": "Join the official ReoMC server!",
+        "cta_label": "Join now",
+        "dismissible_in_main_menu": true,
+        "dismissible_in_server_list": true
+      }
+    }
+  ]
+}

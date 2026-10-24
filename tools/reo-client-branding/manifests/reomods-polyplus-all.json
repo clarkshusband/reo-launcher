@@ -1,0 +1,184 @@
+[
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+1.21.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/ErAbV0Tn/polyplus-1.3.10%2B1.21.1.jar",
+        "sha1":  "82511f7d35c943e16e0e32fffdc4bb3ed49b8f49",
+        "sha512":  "fa0a0a983a4efc5d68156557d35e57d42a9827ae1dc233b278814380b2c401ba888e2a48bc33fe3ce6ef2c900b2b1f3759986d2ef5358be2bfe9e332df0a1c26",
+        "fileSize":  55196760,
+        "outName":  "reoplus-1.3.10+1.21.1.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.1"
+                     ],
+        "bundles":  [
+                        "qol-1.21.1-fabric.mrpack"
+                    ],
+        "partition":  2,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+1.21.10.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/fj3UyYoA/polyplus-1.3.10%2B1.21.10.jar",
+        "sha1":  "8b52df359183f29095ad043447def257a4edb881",
+        "sha512":  "0a7f0031a1aa38ad59d12377d5f7b3c3701aeb8c8fd15914921eee8bb6e9a87f26fe62d366d7c8b0e380ccaac1f9358978c800e3ca7885401e8e9e151fa9fe1c",
+        "fileSize":  55292540,
+        "outName":  "reoplus-1.3.10+1.21.10.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.10"
+                     ],
+        "bundles":  [
+                        "qol-1.21.10-fabric.mrpack"
+                    ],
+        "partition":  2,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+1.21.11.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/VHgP8g2L/polyplus-1.3.10%2B1.21.11.jar",
+        "sha1":  "2c89fa99997c39e457b4ebea69779bb535d0f3f0",
+        "sha512":  "fdd359e7b32215f65986708d6c51994f4997ddf6bf63221fb444b3e19c66ea0c2280d3f6f64f5995904ef2cb4e7e0ff77f529b458ecd4b248ebf2ca1f5836c9e",
+        "fileSize":  79643780,
+        "outName":  "reoplus-1.3.10+1.21.11.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "1.21.11"
+                     ],
+        "bundles":  [
+                        "qol-1.21.11-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+1.8.9.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/mylSoXxE/polyplus-1.3.10%2B1.8.9.jar",
+        "sha1":  "88a3ff92c23ad4d7c59a3b0599d34cc1b5a9069e",
+        "sha512":  "66976dac197fbf023f43113a214253dacb24d3837566bb144fa9ec6740a69dd0124ed9d0fe6e3a442e403b03c2baa0c27baafd528c0417a3d38460abf0601711",
+        "fileSize":  55422645,
+        "outName":  "reoplus-1.3.10+1.8.9.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "1.8.9"
+                     ],
+        "bundles":  [
+                        "qol-1.8.9-ornithe.mrpack"
+                    ],
+        "partition":  1,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+26.1.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/1hwXPCFT/polyplus-1.3.10%2B26.1.jar",
+        "sha1":  "fbfccb11331ca90929233d378b98025b4138216a",
+        "sha512":  "8097ba2fe811bef1b05225733e02abc8114fdc714799a717f6463651f52dc330ab4b2f79de21fc5b1f6e204df56d55bb7c5a89b0337e995b58f733a462011aee",
+        "fileSize":  85241671,
+        "outName":  "reoplus-1.3.10+26.1.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "26.1.2"
+                     ],
+        "bundles":  [
+                        "qol-26.1.2-fabric.mrpack"
+                    ],
+        "partition":  3,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+26.2.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/ZshEmaGe/polyplus-1.3.10%2B26.2.jar",
+        "sha1":  "14236f1534f6fb2c49d8a0ce81ecec7b61a185b2",
+        "sha512":  "a12402e3fa229558b4ea3241b339e5eef116ed671eca8370592ad0141590f94ed8396f88471a0d7ff6c3a5e09e7ba34b192f60f5c3ad4f3b6de5681225456b2b",
+        "fileSize":  55350229,
+        "outName":  "reoplus-1.3.10+26.2.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "26.2"
+                     ],
+        "bundles":  [
+                        "qol-26.2-fabric.mrpack"
+                    ],
+        "partition":  4,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    },
+    {
+        "slug":  "polyplus",
+        "projectId":  "Iw9mZi4a",
+        "usedName":  "polyplus-1.3.10+26.3.jar",
+        "url":  "https://cdn.modrinth.com/data/Iw9mZi4a/versions/nGD5OiOl/polyplus-1.3.10%2B26.3.jar",
+        "sha1":  "6159560e2d95e9d30da876850c60c8844da08686",
+        "sha512":  "33cefa0b7ca84b0923b680a75b33c945c2b1f696094fcbc87abdcab95d4f96e38fe2ac8e889391ce1e71cabfa5aee5ac9f711f40d3fc2b0123f8c0ae8d43db80",
+        "fileSize":  55329493,
+        "outName":  "reoplus-1.3.10+26.3.jar",
+        "name":  "ReoPlus",
+        "contact":  "remove",
+        "versions":  [
+                         "26.3"
+                     ],
+        "bundles":  [
+                        "qol-26.3-fabric.mrpack"
+                    ],
+        "partition":  4,
+        "nestedAuto":  true,
+        "featuredServer":  true,
+        "strictPairs":  false,
+        "pairs":  [
+                      "PolyPlus (OneClient)=\u003eReoPlus (ReoClient)",
+                      "PolyPlus (ReoClient)=\u003eReoPlus (ReoClient)"
+                  ]
+    }
+]
