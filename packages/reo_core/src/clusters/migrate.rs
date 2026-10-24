@@ -119,11 +119,12 @@ async fn apply_rule(state: &LauncherState, rule: &RemoteMigration) -> LauncherRe
         return Ok(false);
     }
 
-    if crate::game::is_running(state, source.id) {
+    // A launch still checking or downloading reads the folder the rename would move
+    if state.games.is_active(source.id) {
         tracing::info!(
             migration_id = %rule.id,
             cluster_id = source.id,
-            "cluster is running; deferring migration"
+            "cluster is launching or running; deferring migration"
         );
         return Ok(false);
     }

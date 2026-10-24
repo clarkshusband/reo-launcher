@@ -601,15 +601,19 @@ async fn copy_tree(
             polyio::create_dir_all(parent).await.ok();
         }
 
-        let written = polyio::copy(&src, &dest)
-            .await
-            .map_err(|err| format!("Couldn't copy {}: {err}", relative.display()))?;
+        let mut written = copy_file(&src, &dest, relative).await?;
 
-        if written != *size {
-            return Err(format!(
-                "{} arrived short. Nothing was removed from the old folder.",
-                relative.display()
-            ));
+        // Something wrote to the file after the walk so it is held to its size
+        // now and given one more copy before the move gives up
+        if written != *size && current_len(&src).await != Some(written) {
+            written = copy_file(&src, &dest, relative).await?;
+
+            if current_len(&src).await != Some(written) {
+                return Err(format!(
+                    "{} arrived short. Nothing was removed from the old folder.",
+                    relative.display()
+                ));
+            }
         }
 
         copied += written;
@@ -624,22 +628,25 @@ async fn copy_tree(
     Ok(copied)
 }
 
+async fn copy_file(src: &Path, dest: &Path, relative: &Path) -> Result<u64, String> {
+    polyio::copy(src, dest)
+        .await
+        .map_err(|err| format!("Couldn't copy {}: {err}", relative.display()))
+}
+
+async fn current_len(path: &Path) -> Option<u64> {
+    polyio::stat(path).await.ok().map(|meta| meta.len())
+}
+
 async fn write_everything(
     state: &LauncherState,
     plan: &RelocationPlan,
     found: &Found,
     on_copied: &mut impl FnMut(u64, u64),
 ) -> Result<u64, String> {
+    // Every file is checked against its own size as it lands so a file that
+    // changed during the move can leave the total off without anything missing
     let copied = copy_tree(&plan.from, &plan.to, found, on_copied).await?;
-
-    if copied != found.total {
-        return Err(format!(
-            "Only {} of {} arrived at {}.",
-            format_bytes(copied),
-            format_bytes(found.total),
-            plan.to.display()
-        ));
-    }
 
     let database = snapshot_database(&state.services.db, &plan.to).await?;
 
@@ -676,6 +683,7 @@ async fn snapshot_database(pool: &DbPool, to: &Path) -> Result<PathBuf, String> 
 async fn rewrite_java_paths(database: &Path, from: &Path, to: &Path) -> Result<u64, String> {
     let old = java_root(from);
     let new = java_root(to);
+    let old_dir = dir_prefix(from);
 
     let options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(database)
@@ -686,7 +694,7 @@ async fn rewrite_java_paths(database: &Path, from: &Path, to: &Path) -> Result<u
         .await
         .map_err(|err| format!("Couldn't open the copied database: {err}"))?;
 
-    let result = swap_java_prefix(&mut conn, &old, &new).await;
+    let result = swap_java_prefix(&mut conn, &old, &new, &old_dir).await;
 
     if let Err(err) = sqlx::Connection::close(conn).await {
         tracing::warn!(%err, "failed to close the copied database cleanly");
@@ -702,12 +710,26 @@ fn java_root(dir: &Path) -> String {
         .into_owned()
 }
 
+/// Trailing separator so a sibling such as `D:\Reo2` never passes for `D:\Reo`
+fn dir_prefix(dir: &Path) -> String {
+    let mut prefix = dir.to_string_lossy().into_owned();
+    if !prefix.ends_with(std::path::MAIN_SEPARATOR) {
+        prefix.push(std::path::MAIN_SEPARATOR);
+    }
+    prefix
+}
+
+fn char_len(text: &str) -> i64 {
+    i64::try_from(text.chars().count()).unwrap_or(i64::MAX)
+}
+
 async fn swap_java_prefix(
     conn: &mut sqlx::SqliteConnection,
     old: &str,
     new: &str,
+    old_dir: &str,
 ) -> Result<u64, String> {
-    let len = i64::try_from(old.chars().count()).unwrap_or(i64::MAX);
+    let len = char_len(old);
 
     let mut tx = conn
         .begin()
@@ -740,11 +762,18 @@ async fn swap_java_prefix(
     .await
     .map_err(|err| format!("Couldn't update your Java runtimes: {err}"))?;
 
+    // Counts only profiles this move repointed or left behind in the old folder
+    // a profile already stale somewhere else is not the move's to block on
     let orphans: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM setting_profiles p
           WHERE p.java_path IS NOT NULL
+            AND (substr(p.java_path, 1, ?) = ? OR substr(p.java_path, 1, ?) = ?)
             AND NOT EXISTS (SELECT 1 FROM java_versions j WHERE j.absolute_path = p.java_path)",
     )
+    .bind(char_len(new))
+    .bind(new)
+    .bind(char_len(old_dir))
+    .bind(old_dir)
     .fetch_one(&mut *tx)
     .await
     .map_err(|err| format!("Couldn't check your Java settings: {err}"))?;
@@ -853,6 +882,69 @@ mod tests {
             names.is_empty(),
             "settings only stay behind when the source folder is the one holding them"
         );
+    }
+
+    async fn java_tables(profiles: &[&str], runtimes: &[&str]) -> sqlx::SqliteConnection {
+        let mut conn = <sqlx::SqliteConnection as sqlx::Connection>::connect("sqlite::memory:")
+            .await
+            .expect("in-memory sqlite");
+
+        sqlx::query("CREATE TABLE setting_profiles (java_path TEXT)")
+            .execute(&mut conn)
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE java_versions (absolute_path TEXT)")
+            .execute(&mut conn)
+            .await
+            .unwrap();
+
+        for path in profiles {
+            sqlx::query("INSERT INTO setting_profiles (java_path) VALUES (?)")
+                .bind(*path)
+                .execute(&mut conn)
+                .await
+                .unwrap();
+        }
+        for path in runtimes {
+            sqlx::query("INSERT INTO java_versions (absolute_path) VALUES (?)")
+                .bind(*path)
+                .execute(&mut conn)
+                .await
+                .unwrap();
+        }
+
+        conn
+    }
+
+    #[tokio::test]
+    async fn a_profile_already_stale_elsewhere_does_not_block_the_move() {
+        let runtime = "/old/metadata/java/zulu21/bin/java";
+        let mut conn = java_tables(&[runtime, "/usr/lib/jvm/gone/bin/java"], &[runtime]).await;
+
+        let rewritten = swap_java_prefix(
+            &mut conn,
+            "/old/metadata/java",
+            "/new/metadata/java",
+            "/old/",
+        )
+        .await
+        .expect("the stale profile was never the move's");
+
+        assert_eq!(rewritten, 2, "the profile and its runtime both moved");
+    }
+
+    #[tokio::test]
+    async fn a_profile_the_move_strands_still_blocks_it() {
+        let mut conn = java_tables(&["/old/jdk/bin/java"], &[]).await;
+
+        swap_java_prefix(
+            &mut conn,
+            "/old/metadata/java",
+            "/new/metadata/java",
+            "/old/",
+        )
+        .await
+        .expect_err("a runtime left in the old folder goes when it does");
     }
 
     #[tokio::test]

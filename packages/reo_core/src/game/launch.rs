@@ -165,6 +165,14 @@ async fn start(
         .await
     {
         tracing::warn!(cluster_id, error = %err, "failed to install bundle content");
+        // The game still starts so say what it is starting without
+        state
+            .services
+            .events
+            .notify("Some content did not install")
+            .body(format!("{err}. The game will start without it."))
+            .error()
+            .send();
     }
 
     let global = state.settings.read().global_game_settings.clone();
@@ -229,23 +237,32 @@ async fn start(
         state.games.set_natives(cluster_id, dir);
     }
 
-    let java = if let Some(runtime) = state
+    let required_java = version_info.java_version.as_ref().map(|v| v.major_version);
+    let java = match state
         .java
         .runtime_for_profile(profile.java_path.as_deref())
         .await?
     {
-        runtime
-    } else {
-        let major = version_info
-            .java_version
-            .as_ref()
-            .map(|v| v.major_version)
-            .ok_or(GameError::MissingJavaVersion)?;
+        // A newer Java runs the game fine an older one dies on start with
+        // `UnsupportedClassVersionError`
+        Some(runtime) if required_java.is_none_or(|major| runtime.major >= major) => runtime,
+        configured => {
+            let major = required_java.ok_or(GameError::MissingJavaVersion)?;
+            if let Some(runtime) = configured {
+                tracing::warn!(
+                    cluster_id,
+                    path = %runtime.absolute_path,
+                    configured = runtime.major,
+                    required = major,
+                    "configured Java is too old for this version; using a matching runtime"
+                );
+            }
 
-        state
-            .java
-            .prepare(major, search_for_java, false, None)
-            .await?
+            state
+                .java
+                .prepare(major, search_for_java, false, None)
+                .await?
+        }
     };
 
     match game_files_missing(&version_info, &java.os_arch, updated) {
@@ -270,6 +287,11 @@ async fn start(
             .await
             {
                 progress.finish();
+                // Left at `Repairing` the cluster would read as busy for good
+                let _ = state
+                    .clusters
+                    .set_stage(cluster_id, ClusterStage::NotReady)
+                    .await;
                 stage(LaunchStage::Exited);
                 return Err(err.into());
             }
@@ -497,7 +519,7 @@ async fn start(
     // start can tell whether the game is still playing
     if let (Some(recorder), Some(pid)) = (recorder.as_ref(), pid) {
         recorder
-            .record_process(pid, crate::game::process_start_time(pid))
+            .record_process(pid, settled_start_time(pid).await)
             .await;
     }
 
@@ -511,6 +533,7 @@ async fn start(
         log_path,
         events.clone(),
         recorder.clone(),
+        0,
         crash_watch.clone(),
     );
 
@@ -559,6 +582,20 @@ async fn start(
     });
 
     Ok(LaunchedGame { cluster_id, pid })
+}
+
+/// A process this fresh is not always listed yet and a session saved without
+/// its start time is hard to re-adopt after a launcher restart
+async fn settled_start_time(pid: u32) -> Option<u64> {
+    for _ in 0..10 {
+        if let Some(at) = crate::game::process_start_time(pid) {
+            return Some(at);
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+
+    tracing::warn!(pid, "could not read the game's start time");
+    None
 }
 
 async fn running_cluster_name(state: &Arc<LauncherState>, cluster_id: i64) -> String {
@@ -641,18 +678,6 @@ pub(crate) async fn finalize_session(
     let cluster_id = cluster.id;
     let played = (end.ended_at - end.started_at).to_std().unwrap_or_default();
 
-    if end.owns_slot {
-        state.games.remove(cluster_id);
-        state
-            .services
-            .events
-            .game_stage(cluster_id, LaunchStage::Exited);
-
-        if state.games.running_ids().is_empty() {
-            state.discord.set_presence(Presence::Idle);
-        }
-    }
-
     if played > Duration::from_secs(1) {
         let _ = state.clusters.add_playtime(cluster_id, played).await;
     }
@@ -665,16 +690,9 @@ pub(crate) async fn finalize_session(
         recorder.finish_at(&end.ended_at.to_rfc3339(), code).await;
     }
 
-    if let Some(reason) = run_hook(post_hook, cwd).await {
-        state
-            .services
-            .events
-            .notify("Post-exit command failed")
-            .body(reason)
-            .error()
-            .send();
-    }
-
+    // Done while the slot is still held a relaunch here or another cluster
+    // sharing the directory would otherwise materialize its content only for
+    // this cleanup to stash it away underneath the new game
     if dedicated {
         // The folder stays materialized so it remains a real Minecraft directory
         // for external tools adopting drop-ins now keeps the UI right on close
@@ -686,8 +704,33 @@ pub(crate) async fn finalize_session(
         crate::game::unlink_cluster_logs(cwd).await;
     }
 
+    if end.owns_slot {
+        state.games.remove(cluster_id);
+        state
+            .services
+            .events
+            .game_stage(cluster_id, LaunchStage::Exited);
+
+        if state.games.running_ids().is_empty() {
+            state.discord.set_presence(Presence::Idle);
+        }
+    }
+
+    // After the slot is freed a user command that never returns must not keep
+    // the cluster looking like it is still running
+    if let Some(reason) = run_hook(post_hook, cwd).await {
+        state
+            .services
+            .events
+            .notify("Post-exit command failed")
+            .body(reason)
+            .error()
+            .send();
+    }
+
     let name = &cluster.name;
-    let crashed = !matches!(end.outcome, Exit::Observed { success: true, .. });
+    // An exit nobody observed or could not wait on is not known to be a crash
+    let crashed = matches!(end.outcome, Exit::Observed { success: false, .. });
 
     match end.outcome {
         Exit::Observed { success: true, .. } => {}
@@ -787,15 +830,52 @@ fn base_command(profile: &GameSettingsProfile, java_path: &str) -> (Command, Opt
         return (Command::new(java_path), None);
     };
 
-    let mut split = wrapper.split_whitespace();
-    let Some(program) = split.next() else {
+    let words = split_words(wrapper);
+    let Some((program, args)) = words.split_first() else {
         return (Command::new(java_path), None);
     };
 
     let mut command = Command::new(program);
-    command.args(split);
+    command.args(args);
     command.arg(java_path);
-    (command, Some(program.to_string()))
+    (command, Some(program.clone()))
+}
+
+/// Shell-style words so a path or value with spaces can be quoted with double
+/// or single quotes
+/// Backslashes stay literal Windows paths are full of them
+fn split_words(raw: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+    let mut started = false;
+
+    for ch in raw.chars() {
+        match quote {
+            Some(open) if ch == open => quote = None,
+            Some(_) => current.push(ch),
+            None if ch == '"' || ch == '\'' => {
+                quote = Some(ch);
+                started = true;
+            }
+            None if ch.is_whitespace() => {
+                if started {
+                    words.push(std::mem::take(&mut current));
+                    started = false;
+                }
+            }
+            None => {
+                current.push(ch);
+                started = true;
+            }
+        }
+    }
+
+    if started {
+        words.push(current);
+    }
+
+    words
 }
 
 fn command_line(command: &std::process::Command, main_class: &str) -> String {
@@ -862,7 +942,7 @@ fn apply_env(command: &mut Command, profile: &GameSettingsProfile) {
     command.env_remove("_JAVA_OPTIONS");
 
     if let Some(env) = &profile.launch_env {
-        for pair in env.split_whitespace() {
+        for pair in split_words(env) {
             if let Some((key, value)) = pair.split_once('=') {
                 command.env(key, value);
             }
@@ -877,7 +957,9 @@ async fn run_hook(hook: Option<&str>, cwd: &Path) -> Option<String> {
     #[cfg(windows)]
     let mut command = {
         let mut c = Command::new("cmd");
-        c.args(["/C", hook]);
+        // cmd ignores the escaping `args` applies to inner quotes with `/S` it
+        // strips exactly the outer pair so a hook quoting its own paths survives
+        c.args(["/S", "/C"]).raw_arg(format!("\"{hook}\""));
         c
     };
     #[cfg(not(windows))]
@@ -965,4 +1047,58 @@ fn stderr_detail(bytes: &[u8]) -> Option<String> {
     let mut clipped: String = line.chars().take(MAX).collect();
     clipped.push('…');
     Some(clipped)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plain_words_split_on_whitespace() {
+        assert_eq!(
+            split_words("  gamescope -W 1920\t-- "),
+            vec!["gamescope", "-W", "1920", "--"]
+        );
+        assert!(split_words("   ").is_empty());
+    }
+
+    #[test]
+    fn quoted_words_keep_their_spaces() {
+        assert_eq!(
+            split_words(r#""C:\Program Files\wrap.exe" --name 'two words'"#),
+            vec![r"C:\Program Files\wrap.exe", "--name", "two words"]
+        );
+    }
+
+    #[test]
+    fn a_quoted_value_joins_its_key() {
+        assert_eq!(
+            split_words(r#"A=1 JAVA_HOME="C:\Program Files\Java" B='x y'"#),
+            vec!["A=1", r"JAVA_HOME=C:\Program Files\Java", "B=x y"]
+        );
+    }
+
+    #[test]
+    fn one_kind_of_quote_is_literal_inside_the_other() {
+        assert_eq!(
+            split_words(r#""it's" 'say "hi"' """#),
+            vec!["it's", r#"say "hi""#, ""]
+        );
+    }
+
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn a_hook_quoting_a_path_with_spaces_runs() {
+        let root = polyio::testing::ScratchDir::new("hook with spaces");
+        let script = root.join("check args.bat");
+        polyio::write(
+            &script,
+            "@if \"%~1\"==\"two words\" exit /b 0\r\n@exit /b 3\r\n",
+        )
+        .await
+        .unwrap();
+
+        let hook = format!("\"{}\" \"two words\"", script.display());
+        assert_eq!(run_hook(Some(hook.as_str()), root.path()).await, None);
+    }
 }

@@ -25,11 +25,14 @@ impl LogTail {
     }
 }
 
+/// Lines starting before `record_from` still reach the console but not the
+/// recorder a re-adopted game's log was already booked up to there
 pub(crate) fn spawn_log_tail(
     cluster_id: i64,
     path: PathBuf,
     events: EventBus,
     recorder: Option<SessionRecorder>,
+    record_from: u64,
     crash_watch: CrashWatch,
 ) -> LogTail {
     let stop = Arc::new(AtomicBool::new(false));
@@ -41,6 +44,7 @@ pub(crate) fn spawn_log_tail(
             &path,
             &events,
             recorder.as_ref(),
+            record_from,
             &crash_watch,
             &flag,
         )
@@ -58,6 +62,7 @@ async fn tail(
     path: &PathBuf,
     events: &EventBus,
     recorder: Option<&SessionRecorder>,
+    mut record_from: u64,
     crash_watch: &CrashWatch,
     stop: &AtomicBool,
 ) -> std::io::Result<()> {
@@ -74,12 +79,14 @@ async fn tail(
     };
 
     let mut reader = BufReader::new(file);
-    let mut line = String::new();
+    // Bytes rather than a `String` a JVM writing in the native codepage would
+    // otherwise end the tail at its first non-UTF-8 byte
+    let mut line = Vec::new();
     let mut offset = 0u64;
 
     loop {
         line.clear();
-        let read = reader.read_line(&mut line).await?;
+        let read = reader.read_until(b'\n', &mut line).await?;
 
         if read == 0 {
             // The read above returned EOF on a drained file so the final pass
@@ -93,31 +100,35 @@ async fn tail(
             if len < offset {
                 reader.seek(std::io::SeekFrom::Start(0)).await?;
                 offset = 0;
+                // Nothing in a fresh log has been recorded yet
+                record_from = 0;
             }
             tokio::time::sleep(POLL_INTERVAL).await;
             continue;
         }
 
+        let start = offset;
         offset += read as u64;
+        let line_recorder = recorder.filter(|_| start >= record_from);
 
         // A partial line means the game is mid-write wait for the newline
         // rather than emitting half a line and re-emitting the rest later
-        if !line.ends_with('\n') {
+        if line.last() != Some(&b'\n') {
             // Unless the game is gone a process killed mid-write leaves a
             // newline that never arrives hanging the caller of `stop()`
             if stop.load(Ordering::Relaxed) {
-                emit(cluster_id, &line, events, recorder, crash_watch).await;
+                let text = String::from_utf8_lossy(&line);
+                emit(cluster_id, &text, events, line_recorder, crash_watch).await;
                 return Ok(());
             }
-            reader
-                .seek(std::io::SeekFrom::Start(offset - read as u64))
-                .await?;
-            offset -= read as u64;
+            reader.seek(std::io::SeekFrom::Start(start)).await?;
+            offset = start;
             tokio::time::sleep(POLL_INTERVAL).await;
             continue;
         }
 
-        emit(cluster_id, &line, events, recorder, crash_watch).await;
+        let text = String::from_utf8_lossy(&line);
+        emit(cluster_id, &text, events, line_recorder, crash_watch).await;
     }
 }
 
@@ -189,7 +200,7 @@ mod tests {
         let path = h.path();
         polyio::write(&path, "[12:00:00] first\n").await.unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, CrashWatch::new());
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
         settle().await;
 
         let mut file = tokio::fs::OpenOptions::new()
@@ -206,11 +217,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn keeps_going_past_a_line_that_is_not_utf8() {
+        let mut h = Harness::new().await;
+        let path = h.path();
+        // A JVM on Windows can write the log in the native codepage
+        polyio::write(&path, b"[12:00:00] caf\xe9\n[12:00:01] after\n".as_slice())
+            .await
+            .unwrap();
+
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        settle().await;
+        tail.stop().await;
+
+        assert_eq!(
+            h.drain(),
+            vec!["[12:00:00] caf\u{fffd}", "[12:00:01] after"]
+        );
+    }
+
+    #[tokio::test]
     async fn waits_for_a_file_that_does_not_exist_yet() {
         let mut h = Harness::new().await;
         let path = h.path();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, CrashWatch::new());
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
         settle().await;
         polyio::write(&path, "[12:00:00] late\n").await.unwrap();
         settle().await;
@@ -225,7 +255,7 @@ mod tests {
         let path = h.path();
         polyio::write(&path, "[12:00:00] half").await.unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, CrashWatch::new());
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
         settle().await;
         // A line mid-write must not be emitted or it would arrive twice
         assert!(h.drain().is_empty());
@@ -251,7 +281,7 @@ mod tests {
             .await
             .unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, CrashWatch::new());
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
         settle().await;
         assert_eq!(h.drain(), vec!["[12:00:00] old session line"]);
 
@@ -273,7 +303,7 @@ mod tests {
             .await
             .unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, CrashWatch::new());
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
         settle().await;
 
         // Waiting for that newline would hang the exit path forever
@@ -295,7 +325,7 @@ mod tests {
 
         // Stopping immediately as the exit path does must still flush the
         // reason the game exited
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, CrashWatch::new());
+        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
         tail.stop().await;
 
         assert_eq!(h.drain(), vec!["[12:00:00] Stopping!"]);

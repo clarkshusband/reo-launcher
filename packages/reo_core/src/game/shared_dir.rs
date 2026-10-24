@@ -450,7 +450,7 @@ async fn ensure_global_links(game_dir: &Path, global_root: &Path) {
             }
 
             Ok(meta) if meta.is_dir() => {
-                if polyio::remove_dir_all(&link).await.is_err() {
+                if !clear_own_pack_folder(&link).await {
                     tracing::warn!(
                         dir = %link.display(),
                         "cannot clear the cluster's own pack folder; leaving it unlinked"
@@ -471,6 +471,46 @@ async fn ensure_global_links(game_dir: &Path, global_root: &Path) {
             );
         }
     }
+}
+
+// what [`adopt_into_global`] could not move (a name the shared folder already has, a failed move) is still the user's so it is set aside rather than deleted
+async fn clear_own_pack_folder(dir: &Path) -> bool {
+    for note in [EMPTY_NOTE_NAME, LINKS_NOTE_NAME] {
+        polyio::remove_file(dir.join(note)).await.ok();
+    }
+    if polyio::remove_dir(dir).await.is_ok() {
+        return true;
+    }
+
+    let Some(name) = dir.file_name().map(|name| name.to_string_lossy().into_owned()) else {
+        return false;
+    };
+    for attempt in 1..100 {
+        let aside = match attempt {
+            1 => dir.with_file_name(format!("{name}-leftover")),
+            n => dir.with_file_name(format!("{name}-leftover-{n}")),
+        };
+        if polyio::symlink_metadata(&aside).await.is_ok() {
+            continue;
+        }
+
+        return match polyio::rename(dir, &aside).await {
+            Ok(()) => {
+                tracing::warn!(
+                    dir = %dir.display(),
+                    kept = %aside.display(),
+                    "some packs could not join the shared folder; kept them aside"
+                );
+                true
+            }
+            Err(err) => {
+                tracing::warn!(dir = %dir.display(), error = %err, "failed to set leftover packs aside");
+                false
+            }
+        };
+    }
+
+    false
 }
 
 const MASS_REMOVAL_FLOOR: usize = 3;
@@ -2635,6 +2675,52 @@ mod tests {
         stash_content_files(&shared, &stash, ContentType::Shader, &HashSet::new()).await;
         assert!(!shared.join("Loose").exists());
         assert!(stash.join("Loose/shaders/final.fsh").exists());
+
+        std::fs::remove_dir_all(root.path()).ok();
+    }
+
+    /// A pack the shared folder already holds under the same name is still the
+    /// user's own copy and must outlive the folder turning into a link
+    #[tokio::test]
+    async fn packs_that_cannot_join_the_shared_folder_are_kept() {
+        let root = polyio::testing::ScratchDir::new("leftover_packs");
+        let game_dir = root.join("game");
+        let global = root.join("shared");
+        let own = game_dir.join("resourcepacks");
+        polyio::create_dir_all(&own).await.unwrap();
+        polyio::create_dir_all(global.join("resourcepacks"))
+            .await
+            .unwrap();
+
+        polyio::write(own.join("clash.zip"), b"mine".as_slice())
+            .await
+            .unwrap();
+        polyio::write(own.join("moved.zip"), b"moved".as_slice())
+            .await
+            .unwrap();
+        polyio::write(
+            global.join("resourcepacks").join("clash.zip"),
+            b"shared".as_slice(),
+        )
+        .await
+        .unwrap();
+
+        adopt_into_global(&game_dir, &global).await;
+        ensure_global_links(&game_dir, &global).await;
+
+        assert_eq!(
+            polyio::read(game_dir.join("resourcepacks-leftover").join("clash.zip"))
+                .await
+                .unwrap(),
+            b"mine"
+        );
+        assert!(global.join("resourcepacks").join("moved.zip").exists());
+        assert!(
+            polyio::symlink_metadata(&own)
+                .await
+                .is_ok_and(|meta| meta.file_type().is_symlink()),
+            "the folder is still linked to the shared one"
+        );
 
         std::fs::remove_dir_all(root.path()).ok();
     }
