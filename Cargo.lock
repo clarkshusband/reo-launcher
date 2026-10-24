@@ -5234,7 +5234,7 @@ checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
 
 [[package]]
 name = "polyio"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "astral-tokio-tar",
  "async-compression",
@@ -5812,7 +5812,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "reo_app"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "anyhow",
  "arboard",
@@ -5862,7 +5862,7 @@ dependencies = [
 
 [[package]]
 name = "reo_auth"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -5886,7 +5886,7 @@ dependencies = [
 
 [[package]]
 name = "reo_cluster"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "bytes 1.12.1",
  "chrono",
@@ -5910,7 +5910,7 @@ dependencies = [
 
 [[package]]
 name = "reo_common"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "directories",
  "interfrost",
@@ -5923,7 +5923,7 @@ dependencies = [
 
 [[package]]
 name = "reo_content"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "async-trait",
  "async_zip",
@@ -5951,7 +5951,7 @@ dependencies = [
 
 [[package]]
 name = "reo_core"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "async-compression",
  "async-stream",
@@ -6016,7 +6016,7 @@ dependencies = [
 
 [[package]]
 name = "reo_db"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "async-tempfile",
  "chrono",
@@ -6031,7 +6031,7 @@ dependencies = [
 
 [[package]]
 name = "reo_discord"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "chrono",
  "discord-rich-presence",
@@ -6043,7 +6043,7 @@ dependencies = [
 
 [[package]]
 name = "reo_events"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "thiserror 2.0.21",
  "tokio",
@@ -6053,7 +6053,7 @@ dependencies = [
 
 [[package]]
 name = "reo_java"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "astral-tokio-tar",
  "async-tempfile",
@@ -6076,7 +6076,7 @@ dependencies = [
 
 [[package]]
 name = "reo_macro"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6085,7 +6085,7 @@ dependencies = [
 
 [[package]]
 name = "reo_mc"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -6107,7 +6107,7 @@ dependencies = [
 
 [[package]]
 name = "reo_net"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -6129,7 +6129,7 @@ dependencies = [
 
 [[package]]
 name = "reo_polyplus"
-version = "2.8.0"
+version = "2.8.1"
 dependencies = [
  "async-tungstenite 0.35.0",
  "bytes 1.12.1",

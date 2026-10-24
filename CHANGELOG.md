@@ -1,3 +1,17 @@
+## 2.8.1 (2026-10-24)
+
+### Fixes
+
+- Fixed the browser replaying its page animation and losing the picked cluster when switching cluster or type
+- Fixed CurseForge jar identification, loader detection, category filters and version lists past the first 50 by [clarkshusband](https://github.com/clarkshusband)
+- Fixed large downloads failing after 10 minutes and the game console stopping on non-UTF-8 log lines by [clarkshusband](https://github.com/clarkshusband)
+- Fixed too long names overflowing in the drag and drop window
+- Fixed filters resetting when you change a tab in cluster view
+- Fixed Play staying disabled after a database restore, and Windows updates now ask before restarting by [clarkshusband](https://github.com/clarkshusband)
+- Added Mojang's log4j hardening for Minecraft 1.7 to 1.16.5 by [clarkshusband](https://github.com/clarkshusband)
+- Added ctrl + f shortcut for focusing the searchbar in logs and live log views
+- Fixed sort by not applying to OneClient versions in the instance list
+
 ## 2.8.0 (2026-10-09)
 
 ### Features
