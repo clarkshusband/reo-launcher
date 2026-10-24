@@ -11,6 +11,48 @@ pub enum HostArch {
     Aarch64,
 }
 
+impl HostArch {
+    /// Reads a JVM's `os.arch` which spells one architecture several ways
+    /// depending on vendor and platform
+    #[must_use]
+    pub fn from_os_arch(os_arch: &str) -> Option<Self> {
+        match os_arch.trim().to_ascii_lowercase().as_str() {
+            "amd64" | "x86_64" | "x86-64" | "x64" => Some(Self::X86_64),
+            "x86" | "i386" | "i486" | "i586" | "i686" => Some(Self::X86),
+            "aarch64" | "arm64" => Some(Self::Aarch64),
+            "arm" | "arm32" | "aarch32" | "armv7" | "armv7l" => Some(Self::Arm),
+            _ => None,
+        }
+    }
+}
+
+/// An `os.arch` nobody recognises never matches so it loses to a JVM built for
+/// this host
+pub(crate) fn matches_host_arch(os_arch: &str) -> bool {
+    HostArch::from_os_arch(os_arch) == Some(HostTarget::CURRENT.arch)
+}
+
+/// `os.arch` as a JVM built for this host reports it
+#[cfg(test)]
+pub(crate) fn host_os_arch() -> &'static str {
+    match HostTarget::CURRENT.arch {
+        HostArch::X86 => "x86",
+        HostArch::X86_64 => "amd64",
+        HostArch::Arm => "arm",
+        HostArch::Aarch64 => "aarch64",
+    }
+}
+
+/// `os.arch` of a JVM built for some other architecture than this host
+#[cfg(test)]
+pub(crate) fn foreign_os_arch() -> &'static str {
+    if HostTarget::CURRENT.arch == HostArch::X86 {
+        "amd64"
+    } else {
+        "x86"
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostOs {
     Windows,
@@ -215,6 +257,28 @@ mod tests {
                 "32"
             }
         });
+    }
+
+    #[test]
+    fn every_spelling_of_an_architecture_is_read_the_same() {
+        for spelling in ["amd64", "x86_64", "x64", "AMD64"] {
+            assert_eq!(HostArch::from_os_arch(spelling), Some(HostArch::X86_64));
+        }
+        for spelling in ["x86", "i386", "i686"] {
+            assert_eq!(HostArch::from_os_arch(spelling), Some(HostArch::X86));
+        }
+        for spelling in ["aarch64", "arm64"] {
+            assert_eq!(HostArch::from_os_arch(spelling), Some(HostArch::Aarch64));
+        }
+        assert_eq!(HostArch::from_os_arch("arm"), Some(HostArch::Arm));
+        assert_eq!(HostArch::from_os_arch("unknown"), None);
+    }
+
+    #[test]
+    fn only_the_host_architecture_matches() {
+        assert!(matches_host_arch(host_os_arch()));
+        assert!(!matches_host_arch(foreign_os_arch()));
+        assert!(!matches_host_arch("unknown"));
     }
 
     #[test]

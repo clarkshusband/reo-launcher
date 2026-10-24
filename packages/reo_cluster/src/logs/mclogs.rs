@@ -3,12 +3,11 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::error::ClusterResult;
+use reo_common::constants::MCLOGS_API_URL;
 use reo_net::RequestError;
 
 use super::manage::{ensure_allowed, read_file_string};
 use super::{LogsError, MclogsUploadResponse};
-
-const MCLOGS_URL: &str = "https://api.mclo.gs/1/log";
 
 const MAX_LINES: usize = 25_000;
 const MAX_BYTES: usize = 10 * 1024 * 1024;
@@ -61,7 +60,7 @@ pub async fn upload_log_at(
 
     let response = net
         .http()
-        .post(MCLOGS_URL)
+        .post(format!("{MCLOGS_API_URL}/log"))
         .form(&[("content", content.as_str())])
         .send()
         .await
