@@ -136,9 +136,21 @@ fn use_dropped_modpack_driver(pending: State<Vec<PathBuf>>, modpacks: State<Vec<
         }
 
         let mut modpacks = modpacks;
-        let dropped = std::mem::take(&mut *modpacks.write());
-        for path in dropped {
-            dispatch.install_modpack(ModpackSource::File(path));
+        let mut dropped = std::mem::take(&mut *modpacks.write()).into_iter();
+        let Some(first) = dropped.next() else {
+            return;
+        };
+
+        // A job already running gets its own notice from the install itself
+        let busy = dispatch.station().peek().installs.modpack_busy;
+        dispatch.install_modpack(ModpackSource::File(first));
+
+        // The install slot holds one modpack, so the rest would each be refused
+        if dropped.next().is_some() && !busy {
+            dispatch
+                .notify("One modpack at a time")
+                .body("Importing the first one. Drop the others again once it has finished.")
+                .send();
         }
     });
 }

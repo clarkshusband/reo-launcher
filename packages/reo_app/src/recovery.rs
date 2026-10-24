@@ -63,9 +63,11 @@ fn retry(actions: &Actions) {
         guard.launcher.snapshots = snapshots().len();
     }
 
+    let actions = actions.clone();
     spawn_forever(async move {
-        if let Err(err) = crate::events::start_launcher(station, events).await {
-            crate::events::report_startup_failure(&station, &err);
+        match crate::events::start_launcher(station, events).await {
+            Ok(()) => crate::events::finish_startup(&actions),
+            Err(err) => crate::events::report_startup_failure(&station, &err),
         }
     });
 }

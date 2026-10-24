@@ -110,8 +110,13 @@ fn can_self_update() -> bool {
         return false;
     }
 
-    if std::env::var_os("ONECLIENT_DISABLE_AUTOUPDATE")
-        .is_some_and(|val| val.eq_ignore_ascii_case("1"))
+    if std::env::var_os("REO_DISABLE_AUTOUPDATE")
+        .or_else(|| std::env::var_os("ONECLIENT_DISABLE_AUTOUPDATE"))
+        .is_some_and(|val| {
+            ["1", "true", "yes"]
+                .into_iter()
+                .any(|on| val.eq_ignore_ascii_case(on))
+        })
     {
         return false;
     }
@@ -140,11 +145,34 @@ fn check_for_update() -> anyhow::Result<Option<Update>> {
 async fn download_and_install(update: Update, events: EventBus) -> anyhow::Result<()> {
     let progress_id = Uuid::new_v4();
     let version = update.version.clone();
-    let label = format!("Downloading Reo Launcher {version}");
+
+    let (update, bytes) = match download(update, events.clone(), progress_id).await {
+        Ok(downloaded) => downloaded,
+        Err(err) => {
+            // A card left loading can never be dismissed
+            events.finish_progress(
+                progress_id,
+                "Update failed",
+                format!("Couldn't download Reo Launcher {version}: {err}"),
+            );
+            return Err(err);
+        }
+    };
+
+    install(update, bytes, events, progress_id).await
+}
+
+/// Download and signature check, `Update::install` is left to the caller
+async fn download(
+    update: Update,
+    events: EventBus,
+    progress_id: Uuid,
+) -> anyhow::Result<(Update, Vec<u8>)> {
+    let label = format!("Downloading Reo Launcher {}", update.version);
 
     events.progress(progress_id, &label, 0, 0);
 
-    tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
+    tokio::task::spawn_blocking(move || -> anyhow::Result<(Update, Vec<u8>)> {
         let downloaded = Cell::new(0u64);
         let last_sent = Cell::new(0u64);
 
@@ -168,18 +196,140 @@ async fn download_and_install(update: Update, events: EventBus) -> anyhow::Resul
         let total = downloaded.get().max(1);
         events.progress(progress_id, &label, total, total);
 
-        update.install(bytes)?;
+        Ok((update, bytes))
+    })
+    .await?
+}
 
-        // Converts the same download card into its finished state rather than adding a second
+#[cfg(not(windows))]
+async fn install(
+    update: Update,
+    bytes: Vec<u8>,
+    events: EventBus,
+    progress_id: Uuid,
+) -> anyhow::Result<()> {
+    let version = update.version.clone();
+
+    let installed = tokio::task::spawn_blocking(move || update.install(bytes)).await;
+    let failure = match installed {
+        Ok(Ok(())) => None,
+        Ok(Err(err)) => Some(anyhow::Error::from(err)),
+        Err(err) => Some(anyhow::Error::from(err)),
+    };
+    if let Some(err) = failure {
         events.finish_progress(
             progress_id,
-            "Finished Downloading",
-            format!("Reo Launcher {version} is ready. Restart to apply."),
+            "Update failed",
+            format!("Couldn't install Reo Launcher {version}: {err}"),
         );
-        Ok(())
-    })
-    .await??;
+        return Err(err);
+    }
+
+    // Converts the same download card into its finished state rather than adding a second
+    events.finish_progress(
+        progress_id,
+        "Finished Downloading",
+        format!("Reo Launcher {version} is ready. Restart to apply."),
+    );
 
     tracing::info!("update installed; restart to apply");
     Ok(())
+}
+
+/// How often an install held back by a game or a folder move looks again
+#[cfg(windows)]
+const BLOCKED_POLL: std::time::Duration = std::time::Duration::from_secs(5);
+
+#[cfg(windows)]
+fn restart_prompt(version: &str) -> Prompt<UpdateAnswer> {
+    Prompt::new(
+        "Update ready",
+        format!(
+            "Reo Launcher {version} is downloaded. Restart now to install it? The launcher \
+             closes while the update installs."
+        ),
+    )
+    .option(
+        Choice::primary(UPDATE_CHOICE_INSTALL, "Restart and install"),
+        UpdateAnswer::Install,
+    )
+    .dismiss("Not now")
+}
+
+/// `None` once nothing would be cut off by the installer closing the launcher
+#[cfg(windows)]
+fn install_blocker() -> Option<&'static str> {
+    if reo_core::relocate::in_progress() {
+        return Some("The data folder is still being moved.");
+    }
+
+    let playing = crate::hooks::launch_in_flight()
+        || crate::launcher::state().is_ok_and(|state| !state.games.active_ids().is_empty());
+    playing.then_some("Minecraft is still starting or running.")
+}
+
+/// `Update::install` ends the process here so it only runs when the user asks
+/// for the restart, never by itself
+#[cfg(windows)]
+async fn install(
+    update: Update,
+    bytes: Vec<u8>,
+    events: EventBus,
+    progress_id: Uuid,
+) -> anyhow::Result<()> {
+    let version = update.version.clone();
+
+    events.finish_progress(
+        progress_id,
+        "Update ready",
+        format!("Reo Launcher {version} is downloaded."),
+    );
+
+    loop {
+        if events.ask(restart_prompt(&version)).await?.is_none() {
+            tracing::info!("user put off installing update {version}");
+            return Ok(());
+        }
+
+        let Some(reason) = install_blocker() else {
+            break;
+        };
+
+        events
+            .notify("Update waiting")
+            .body(format!("{reason} Reo Launcher asks again once that is done."))
+            .send();
+
+        while install_blocker().is_some() {
+            tokio::time::sleep(BLOCKED_POLL).await;
+        }
+    }
+
+    tracing::info!("closing to install update {version}");
+
+    let state = crate::launcher::state().ok();
+    let installed = tokio::task::spawn_blocking(move || {
+        // The installer exits the process so this is the only shutdown it gets
+        if let Some(state) = state {
+            tokio::runtime::Handle::current().block_on(reo_core::shutdown(&state));
+        }
+        update.install(bytes)
+    })
+    .await;
+
+    // Only reached when the installer never started
+    let err = match installed {
+        Ok(Ok(())) => return Ok(()),
+        Ok(Err(err)) => anyhow::Error::from(err),
+        Err(err) => anyhow::Error::from(err),
+    };
+    events
+        .notify("Update failed")
+        .body(format!(
+            "Couldn't start the installer for Reo Launcher {version}: {err}. Restart Reo \
+             Launcher to keep using it."
+        ))
+        .error()
+        .send();
+    Err(err)
 }

@@ -5,7 +5,9 @@ use reo_core::LauncherState;
 
 use crate::Actions;
 use crate::components::IconType;
-use crate::hooks::{use_dispatch, use_launcher, use_pending_launch, use_settings_snapshot};
+use crate::hooks::{
+    use_dispatch, use_launcher, use_pending_launch, use_relocation, use_settings_snapshot,
+};
 use crate::launcher;
 use crate::routes::Route;
 use crate::state::LaunchBlock;
@@ -17,12 +19,17 @@ impl Component for PendingLaunchDriver {
     fn render(&self) -> impl IntoElement {
         let dispatch = use_dispatch();
         let waiting = use_pending_launch().is_some();
-        let ready = use_launcher().ready;
+        let launcher = use_launcher();
         let onboarded = use_settings_snapshot().settings.seen_onboarding;
+        // The move screen owns the window until the user leaves it, and the
+        // launch below would route away from it
+        let moving = use_relocation().plan.is_some() || reo_core::relocate::in_progress();
 
         let router = RouterContext::get();
 
-        let armed = waiting && ready && onboarded;
+        // Held to what the Play button waits for, whether or not the cluster uses bundles
+        let settled = launcher.ready && !launcher.fetching && !launcher.syncing_bundles;
+        let armed = waiting && settled && onboarded && !moving;
         use_side_effect_with_deps(&armed, move |&armed| {
             if !armed {
                 return;

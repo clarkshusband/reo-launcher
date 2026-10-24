@@ -10,6 +10,7 @@ mod release_migration;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -39,6 +40,15 @@ use crate::{invalidate_java_queries, launcher};
 
 /// Over-disabling is the cheaper mistake a dead button beats a second game
 const LAUNCH_HOLD: Duration = Duration::from_secs(2);
+
+/// The core only tracks a launch once its files resolve, the checks and
+/// prompts before that count here so the updater does not close mid-launch
+static LAUNCHES_IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
+
+#[must_use]
+pub fn launch_in_flight() -> bool {
+    LAUNCHES_IN_FLIGHT.load(Ordering::SeqCst) > 0
+}
 
 /// Mirrors `reo_net`'s reachability probe not reqwest's per-request
 /// timeouts which are minutes long This sits between Play and the game
@@ -385,6 +395,11 @@ impl Actions {
             let Ok(state) = launcher::state() else { return };
             if let Err(err) = save_global_profile(&state.settings, profile).await {
                 tracing::error!("failed to save the global profile: {err:#}");
+                actions
+                    .notify("Couldn't save the global profile")
+                    .body(err.to_string())
+                    .error()
+                    .send();
                 return;
             }
             actions.mutate_settings(|_| {});
@@ -400,6 +415,11 @@ impl Actions {
             update.apply(&mut global);
             if let Err(err) = save_global_profile(&state.settings, global).await {
                 tracing::error!("failed to update the global profile: {err:#}");
+                actions
+                    .notify("Couldn't update the global profile")
+                    .body(err.to_string())
+                    .error()
+                    .send();
                 return;
             }
             actions.mutate_settings(|_| {});
@@ -496,7 +516,16 @@ impl Actions {
             let Ok(state) = launcher::state() else { return };
             match state.clusters.update_profile(cluster_id, update).await {
                 Ok(_) => super::invalidate_profile_queries().await,
-                Err(err) => tracing::error!("failed to update cluster profile: {err:#}"),
+                Err(err) => {
+                    tracing::error!("failed to update cluster profile: {err:#}");
+                    state
+                        .services
+                        .events
+                        .notify("Couldn't update the cluster profile")
+                        .body(err.to_string())
+                        .error()
+                        .send();
+                }
             }
         });
     }
@@ -516,7 +545,16 @@ impl Actions {
                 .await
             {
                 Ok(_) => super::invalidate_profile_queries().await,
-                Err(err) => tracing::error!("failed to assign cluster profile: {err:#}"),
+                Err(err) => {
+                    tracing::error!("failed to assign cluster profile: {err:#}");
+                    state
+                        .services
+                        .events
+                        .notify("Couldn't create the cluster profile")
+                        .body(err.to_string())
+                        .error()
+                        .send();
+                }
             }
         });
     }
@@ -643,8 +681,15 @@ impl Actions {
                         return;
                     }
                 }
+                // Removing it anyway could leave a pinned cluster unable to launch
                 (Err(err), _) | (_, Err(err)) => {
                     tracing::error!("could not check whether the java runtime is in use: {err:#}");
+                    events
+                        .notify("Cannot remove this JDK")
+                        .body(format!("Couldn't check whether a cluster uses it: {err}"))
+                        .error()
+                        .send();
+                    return;
                 }
             }
 
@@ -1016,7 +1061,9 @@ impl Actions {
         let actions = self.clone();
         spawn_forever(async move {
             let started = Instant::now();
+            LAUNCHES_IN_FLIGHT.fetch_add(1, Ordering::SeqCst);
             launch(&actions, cluster_id).await;
+            LAUNCHES_IN_FLIGHT.fetch_sub(1, Ordering::SeqCst);
 
             // An instant failure would hand the button back inside the same
             // click burst so hold it for the floor either way
@@ -1812,10 +1859,6 @@ impl Actions {
         });
 
         super::invalidate_cluster_queries().await;
-
-        if applied > 0 {
-            super::invalidate_cluster_queries().await;
-        }
     }
 
     async fn resolve_bundle_choices_before_launch(

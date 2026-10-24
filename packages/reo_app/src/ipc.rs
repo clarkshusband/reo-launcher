@@ -182,6 +182,7 @@ mod imp {
 
     const BUSY_RETRIES: usize = 5;
     const BUSY_BACKOFF: Duration = Duration::from_millis(60);
+    const SERVE_BACKOFF: Duration = Duration::from_millis(250);
 
     pub struct Listener {
         server: NamedPipeServer,
@@ -211,22 +212,37 @@ mod imp {
         false
     }
 
+    /// Never gives up while the launcher runs, a vanished pipe would let the
+    /// next launch become a second primary
     pub async fn serve(listener: Listener, commands: UnboundedSender<IpcCommand>) {
         let mut server = listener.server;
 
         loop {
-            if server.connect().await.is_err() {
-                return;
-            }
+            let connected = server.connect().await;
 
-            let next = match ServerOptions::new().create(ENDPOINT) {
-                Ok(next) => next,
-                Err(_) => return,
+            // The next instance is open before this one goes so the name is never free
+            let next = loop {
+                match ServerOptions::new().create(ENDPOINT) {
+                    Ok(next) => break next,
+                    Err(err) => {
+                        tracing::warn!("could not open the next ipc pipe instance: {err}");
+                        tokio::time::sleep(SERVE_BACKOFF).await;
+                    }
+                }
             };
-            let connected = std::mem::replace(&mut server, next);
+            let current = std::mem::replace(&mut server, next);
 
-            let commands = commands.clone();
-            tokio::spawn(async move { handle(connected, &commands).await });
+            match connected {
+                Ok(()) => {
+                    let commands = commands.clone();
+                    tokio::spawn(async move { handle(current, &commands).await });
+                }
+                Err(err) => {
+                    tracing::warn!("ipc pipe connect failed, serving a fresh instance: {err}");
+                    drop(current);
+                    tokio::time::sleep(SERVE_BACKOFF).await;
+                }
+            }
         }
     }
 }

@@ -10,8 +10,8 @@ use reo_app::ipc::{self, Claim};
 use reo_app::state::{AppChannel, AppState, LauncherInit};
 use reo_app::{
     Actions, ConfirmLinkOverlay, EssentialConfirmOverlay, EssentialGuardState, EventPump,
-    LinkConfirmState, StartMaximizedState, cli, constants, events, microsoft_java, platform,
-    router, theme, use_provide_actions, use_provide_essential_guard, use_provide_link_confirm,
+    LinkConfirmState, StartMaximizedState, cli, constants, events, platform, router, theme,
+    use_provide_actions, use_provide_essential_guard, use_provide_link_confirm,
     use_provide_start_maximized,
 };
 use std::cell::Cell;
@@ -57,13 +57,7 @@ impl App for ReoLauncherApp {
                 let rescue_bus = events_bus.clone();
                 spawn_forever(async move {
                     match events::start_launcher(station, events_bus).await {
-                        // Must follow startup `sync_bundles` needs the launcher handle and firing
-                        // it early leaves `syncing_bundles` stuck disabling every launch button
-                        Ok(()) => {
-                            startup.sync_bundles();
-                            Actions::check_sessions();
-                            microsoft_java::spawn_auto_install();
-                        }
+                        Ok(()) => events::finish_startup(&startup),
                         Err(err) => {
                             events::report_startup_failure(&station, &err);
                             reo_app::updater::spawn_update_check(false, rescue_bus);
@@ -116,6 +110,21 @@ fn main() {
     let rt = builder.build().unwrap();
     let _tokio_guard = rt.enter();
 
+    // The unix endpoint lives in the config folder, which is resolved once and
+    // cached, so the folder is adopted first there; adoption checks its socket itself
+    #[cfg(unix)]
+    let adopted = rt.block_on(reo_core::relocate::adopt_legacy_dir());
+
+    let mut unprotected = None;
+    match rt.block_on(ipc::claim(&cli)) {
+        Claim::Forwarded => return,
+        Claim::Primary(listener) => ipc::listen(listener),
+        Claim::Solo(reason) => unprotected = Some(reason),
+    }
+
+    // Only once this is the one launcher, renaming the folder under a running
+    // primary would pull its data out from under it
+    #[cfg(not(unix))]
     let adopted = rt.block_on(reo_core::relocate::adopt_legacy_dir());
 
     // no settings file is the sign of a fresh install, but not proof of one
@@ -129,13 +138,6 @@ fn main() {
         .map(|path| path.exists())
         .unwrap_or(false);
     let needs_location = never_set_up && !has_database && !was_damaged;
-
-    let mut unprotected = None;
-    match rt.block_on(ipc::claim(&cli)) {
-        Claim::Forwarded => return,
-        Claim::Primary(listener) => ipc::listen(listener),
-        Claim::Solo(reason) => unprotected = Some(reason),
-    }
 
     let settings = rt.block_on(reo_core::settings::store::load_settings(None));
 
@@ -152,12 +154,19 @@ fn main() {
         reo_common::paths::set_data_dir(dir);
     }
 
-    if settings.log_debug {
+    let logger = if settings.log_debug {
         reo_core::logger::init_debug()
     } else {
         reo_core::logger::init()
+    };
+
+    // Without a console a panic here would close the app before it ever shows
+    if let Err(err) = logger {
+        let _ = tracing_subscriber::fmt()
+            .with_writer(std::io::stderr)
+            .try_init();
+        tracing::error!("logging fell back to stderr, the log file could not be set up: {err}");
     }
-    .expect("Failed to initialize logger");
 
     match adopted {
         Ok(Some(from)) => {
@@ -244,7 +253,8 @@ fn main() {
     let mut launch_config = LaunchConfig::new()
         .with_window(window_config)
         .with_gpu_resource_cache_limit(
-            std::env::var("ONECLIENT_GPU_CACHE_BYTES")
+            std::env::var("REO_GPU_CACHE_BYTES")
+                .or_else(|_| std::env::var("ONECLIENT_GPU_CACHE_BYTES"))
                 .ok()
                 .and_then(|v| v.parse::<usize>().ok())
                 .unwrap_or(96 * 1024 * 1024),

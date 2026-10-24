@@ -235,20 +235,41 @@ pub mod tray {
             &logs,
             &PredefinedMenuItem::separator(),
             &MenuItem::with_id(QUIT_ID, "Quit Reo Launcher", true, None),
-        ])
-        .expect("failed to build the tray menu");
+        ]);
 
-        GAME_ITEMS.with_borrow_mut(|items| *items = vec![stop, logs]);
-        ACTIVE.store(true, Ordering::Relaxed);
-
-        TrayIconBuilder::new()
-            .with_menu(Box::new(menu))
+        let mut builder = TrayIconBuilder::new()
             .with_tooltip(constants::WINDOW_TITLE)
             .with_icon(LaunchConfig::tray_icon(ICON))
             .with_icon_as_template(cfg!(target_os = "macos"))
-            .with_menu_on_left_click(!cfg!(target_os = "windows"))
-            .build()
-            .expect("failed to create the tray icon")
+            .with_menu_on_left_click(!cfg!(target_os = "windows"));
+
+        match menu {
+            Ok(menu) => {
+                builder = builder.with_menu(Box::new(menu));
+                GAME_ITEMS.with_borrow_mut(|items| *items = vec![stop, logs]);
+            }
+            Err(err) => {
+                tracing::error!("failed to build the tray menu, showing the icon alone: {err}")
+            }
+        }
+
+        match builder.build() {
+            Ok(icon) => {
+                ACTIVE.store(true, Ordering::Relaxed);
+                icon
+            }
+            Err(err) => {
+                tracing::error!("failed to create the tray icon, carrying on without one: {err}");
+                GAME_ITEMS.with_borrow_mut(|items| items.clear());
+
+                // Freya has to be handed an icon back so a bare hidden one stands in
+                let bare = TrayIconBuilder::new()
+                    .build()
+                    .expect("failed to create even a bare tray icon");
+                let _ = bare.set_visible(false);
+                bare
+            }
+        }
     }
 
     pub fn handle(event: TrayEvent, _ctx: RendererContext<'_>) {

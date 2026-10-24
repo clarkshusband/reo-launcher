@@ -27,7 +27,9 @@ pub use active_cluster::{
     use_provide_start_maximized, use_splash, use_start_maximized,
 };
 
-pub use actions::{Actions, NotificationBuilder, PumpSignal, modpack_job_running};
+pub use actions::{
+    Actions, NotificationBuilder, PumpSignal, launch_in_flight, modpack_job_running,
+};
 pub use queries::ALL_VERSIONS;
 pub(crate) use queries::use_folder_watch;
 pub use queries::{
