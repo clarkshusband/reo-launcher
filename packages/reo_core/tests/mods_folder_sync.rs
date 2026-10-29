@@ -4,6 +4,12 @@ use reo_content::packages::store::manifest::{self, MaterializedManifest};
 use reo_core::clusters::CreateClusterOptions;
 use reo_core::game::sync_cluster_mods;
 
+// `ephemeral_state` gives each test its own database, but only the first test to
+// start gets to pick the launcher folder, so both tests here share one package cache.
+// Each caches the same jar at the same path there, and removing it in one test can
+// delete the file while the other is still importing it, so they take turns
+static SHARED_CACHE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 fn jar(tag: &str) -> Vec<u8> {
     let mut bytes = b"PK\x05\x06".to_vec();
     bytes.extend([0; 16]);
@@ -14,6 +20,7 @@ fn jar(tag: &str) -> Vec<u8> {
 
 #[tokio::test]
 async fn hand_edits_to_the_mods_folder_reach_the_database() {
+    let _turn = SHARED_CACHE.lock().await;
     let state = reo_core::dev::ephemeral_state().await.unwrap();
     let global = state.settings.read().global_game_settings.clone();
     let cluster = state
@@ -89,6 +96,7 @@ async fn hand_edits_to_the_mods_folder_reach_the_database() {
 
 #[tokio::test]
 async fn a_mod_removed_in_the_launcher_stays_removed_before_the_first_launch() {
+    let _turn = SHARED_CACHE.lock().await;
     let state = reo_core::dev::ephemeral_state().await.unwrap();
     let global = state.settings.read().global_game_settings.clone();
     let cluster = state
