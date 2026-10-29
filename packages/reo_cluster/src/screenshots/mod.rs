@@ -137,7 +137,7 @@ mod tests {
 
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!(
-            "oneclient-picked-{tag}-{}-{unique}",
+            "reoclient-picked-{tag}-{}-{unique}",
             std::process::id()
         ));
         std::fs::create_dir_all(&dir).unwrap();
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn a_missing_picked_file_is_an_error_not_an_empty_image() {
-        let missing = std::env::temp_dir().join("oneclient-picked-missing-does-not-exist.png");
+        let missing = std::env::temp_dir().join("reoclient-picked-missing-does-not-exist.png");
 
         assert!(load_picked_image(&missing, None).is_err());
     }

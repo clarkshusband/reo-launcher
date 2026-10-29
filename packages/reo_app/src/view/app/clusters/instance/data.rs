@@ -84,13 +84,13 @@ fn matches_filter(kind: GameVersionKind, filter: u8) -> bool {
     filter & kind_bit(kind) != 0
 }
 
-struct OneClientVersion {
+struct ReoClientVersion {
     id: String,
     loader: GameLoader,
 }
 
 struct Catalogue {
-    oneclient: Vec<OneClientVersion>,
+    reoclient: Vec<ReoClientVersion>,
     reo_settled: bool,
     vanilla: Option<Arc<[GameVersion]>>,
     java: HashMap<String, u32>,
@@ -99,14 +99,14 @@ struct Catalogue {
 
 impl Catalogue {
     fn loader_for(&self, version: &str) -> Option<GameLoader> {
-        self.oneclient
+        self.reoclient
             .iter()
             .find(|entry| entry.id == version)
             .map(|entry| entry.loader)
     }
 
     fn lists(&self, version: &str) -> bool {
-        self.oneclient.iter().any(|entry| entry.id == version)
+        self.reoclient.iter().any(|entry| entry.id == version)
     }
 }
 
@@ -115,12 +115,12 @@ fn use_catalogue(choice: TypeChoice) -> Catalogue {
     let vanilla_query = use_game_versions();
 
     let metadata = versions_metadata(&reo_query);
-    let mut oneclient: Vec<OneClientVersion> = metadata
+    let mut reoclient: Vec<ReoClientVersion> = metadata
         .clone()
         .unwrap_or_default()
         .into_iter()
         .filter_map(|entry| {
-            Some(OneClientVersion {
+            Some(ReoClientVersion {
                 id: reo_common::version::format_mc_version(
                     entry.major_version,
                     entry.minor_version?,
@@ -130,22 +130,22 @@ fn use_catalogue(choice: TypeChoice) -> Catalogue {
             })
         })
         .collect();
-    oneclient.sort_by_key(|entry| std::cmp::Reverse(version_sort_key(&entry.id)));
+    reoclient.sort_by_key(|entry| std::cmp::Reverse(version_sort_key(&entry.id)));
 
-    let java_query = use_java_majors(if choice == TypeChoice::OneClient {
-        oneclient.iter().map(|entry| entry.id.clone()).collect()
+    let java_query = use_java_majors(if choice == TypeChoice::ReoClient {
+        reoclient.iter().map(|entry| entry.id.clone()).collect()
     } else {
         Vec::new()
     });
 
-    let error = if choice == TypeChoice::OneClient {
+    let error = if choice == TypeChoice::ReoClient {
         query_error(&reo_query)
     } else {
         query_error(&vanilla_query)
     };
 
     Catalogue {
-        oneclient,
+        reoclient,
         reo_settled: metadata.is_some(),
         vanilla: game_versions(&vanilla_query),
         java: java_majors(&java_query),
@@ -210,10 +210,10 @@ fn build_version_list(
 ) -> VersionList {
     let matches_needle = |id: &str| needle.is_empty() || id.to_lowercase().contains(needle);
 
-    if choice == TypeChoice::OneClient {
+    if choice == TypeChoice::ReoClient {
         return VersionList::Curated(
             catalogue
-                .oneclient
+                .reoclient
                 .iter()
                 .filter(|entry| matches_needle(&entry.id))
                 .map(|entry| VersionRow {
@@ -242,8 +242,8 @@ fn build_version_list(
 }
 
 fn default_version(choice: TypeChoice, catalogue: &Catalogue, filter: u8) -> Option<String> {
-    if choice == TypeChoice::OneClient {
-        return catalogue.oneclient.first().map(|entry| entry.id.clone());
+    if choice == TypeChoice::ReoClient {
+        return catalogue.reoclient.first().map(|entry| entry.id.clone());
     }
 
     let all = catalogue.vanilla.as_deref().unwrap_or(&[]);
@@ -259,7 +259,7 @@ fn default_version(choice: TypeChoice, catalogue: &Catalogue, filter: u8) -> Opt
 
 fn kind_for(choice: TypeChoice, loader: Option<GameLoader>) -> ClusterKind {
     match (choice, loader) {
-        (TypeChoice::OneClient, _) => ClusterKind::OneClient,
+        (TypeChoice::ReoClient, _) => ClusterKind::ReoClient,
         (TypeChoice::Scratch, Some(GameLoader::Vanilla) | None) => ClusterKind::Vanilla,
         (TypeChoice::Scratch, Some(_)) | (TypeChoice::Modpack, _) => ClusterKind::Modded,
     }
@@ -303,8 +303,8 @@ pub fn resolve(w: Wizard) -> Picks {
     let needle = w.query.read().trim().to_lowercase();
     let versions = build_version_list(choice, &catalogue, filter, &needle);
 
-    let oneclient = choice == TypeChoice::OneClient;
-    let versions_settled = if oneclient {
+    let reoclient = choice == TypeChoice::ReoClient;
+    let versions_settled = if reoclient {
         catalogue.reo_settled
     } else {
         catalogue.vanilla.is_some()
@@ -312,7 +312,7 @@ pub fn resolve(w: Wizard) -> Picks {
     let versions_error = catalogue.error.clone();
 
     let still_offered = |chosen: &String| {
-        if oneclient {
+        if reoclient {
             catalogue.lists(chosen)
         } else {
             catalogue
@@ -331,7 +331,7 @@ pub fn resolve(w: Wizard) -> Picks {
     let available_query = use_version_loaders(version.clone().unwrap_or_default());
     let available = settled_or_loading(&available_query);
     let loader = match choice {
-        TypeChoice::OneClient => version.as_ref().and_then(|id| catalogue.loader_for(id)),
+        TypeChoice::ReoClient => version.as_ref().and_then(|id| catalogue.loader_for(id)),
         TypeChoice::Scratch | TypeChoice::Modpack => {
             w.loader.read().resolve(available.as_deref().unwrap_or(&[]))
         }
@@ -350,7 +350,7 @@ pub fn resolve(w: Wizard) -> Picks {
         _ => None,
     };
 
-    let bundles = use_bundle_context(version.as_ref(), loader, oneclient, step == Step::Bundles);
+    let bundles = use_bundle_context(version.as_ref(), loader, reoclient, step == Step::Bundles);
 
     let kind = kind_for(choice, loader);
     let suggested = suggested_name(version.as_ref(), kind, loader);

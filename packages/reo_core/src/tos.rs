@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{LauncherError, LauncherResult};
+use crate::LauncherResult;
 use reo_common::constants;
-use reo_common::paths;
 use reo_net::RequestClient;
-use reo_net::{EtagPolicy, fetch_cached};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TermsDocument {
@@ -48,18 +46,24 @@ impl TermsDocument {
     }
 }
 
-#[tracing::instrument(level = "debug", skip(net))]
-pub async fn fetch_terms(net: &RequestClient) -> LauncherResult<TermsDocument> {
-    let url = format!("{}/oneclient/tos.json", net.config().meta_url_base);
-    let cache_path = paths::caches_dir()?.join("TERMS.json");
+/// Bump these whenever `legal/TERMS.md` or `legal/PRIVACY.md` change so users
+/// are asked to accept again. They start above the versions of the upstream
+/// Polyfrost documents so everyone who accepted those reviews ours.
+const TERMS_VERSION: u32 = 3;
+const PRIVACY_VERSION: u32 = 5;
 
-    let fetched = fetch_cached(net, &url, &cache_path, EtagPolicy::CommitNow)
-        .await?
-        .ok_or_else(|| LauncherError::InvalidSettingsProfile {
-            reason: "terms are unavailable and not cached".to_string(),
-        })?;
-
-    Ok(fetched.json()?)
+/// Returns Reo Launcher's own Terms and Privacy Policy, bundled into the binary.
+#[tracing::instrument(level = "debug", skip(_net))]
+pub async fn fetch_terms(_net: &RequestClient) -> LauncherResult<TermsDocument> {
+    Ok(TermsDocument {
+        version: TERMS_VERSION,
+        privacy_version: Some(PRIVACY_VERSION),
+        updated_at: Some("2026-10-29".to_string()),
+        terms: include_str!("../../../legal/TERMS.md").to_string(),
+        privacy: Some(include_str!("../../../legal/PRIVACY.md").to_string()),
+        terms_url: None,
+        privacy_url: None,
+    })
 }
 
 #[cfg(test)]

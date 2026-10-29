@@ -91,10 +91,6 @@ impl CredentialsStore {
     }
 
     fn insert_offline_account(&mut self, username: String) -> AuthResult<MinecraftAccount> {
-        if !self.has_microsoft_account() {
-            return Err(AuthError::OfflineRequiresMicrosoft);
-        }
-
         validate_offline_username(&username)?;
 
         if self
@@ -141,7 +137,7 @@ impl CredentialsStore {
             return Err(AuthError::AccountNotFound(id));
         };
 
-        account.refresh_token = "oneclient-debug-invalid-refresh-token".to_string();
+        account.refresh_token = "reoclient-debug-invalid-refresh-token".to_string();
         account.expires = chrono::DateTime::UNIX_EPOCH;
         self.save().await?;
         Ok(())
@@ -201,15 +197,7 @@ impl CredentialsStore {
         let Some(id) = self.resolve_default_id().await? else {
             return Ok(None);
         };
-        let Some(account) = self.users.get(&id).cloned() else {
-            return Ok(None);
-        };
-
-        if account.is_offline() && !self.has_microsoft_account() {
-            return Err(AuthError::OfflineRequiresMicrosoft);
-        }
-
-        Ok(Some(account))
+        Ok(self.users.get(&id).cloned())
     }
 }
 

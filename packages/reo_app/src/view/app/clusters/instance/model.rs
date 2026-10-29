@@ -25,7 +25,7 @@ pub fn kind_bit(kind: GameVersionKind) -> u8 {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TypeChoice {
-    OneClient,
+    ReoClient,
     Scratch,
     Modpack,
 }
@@ -133,13 +133,13 @@ impl Step {
     }
 }
 
-const ONECLIENT_STEPS: [Step; 4] = [Step::Type, Step::Version, Step::Bundles, Step::Customize];
+const REOCLIENT_STEPS: [Step; 4] = [Step::Type, Step::Version, Step::Bundles, Step::Customize];
 const SCRATCH_STEPS: [Step; 4] = [Step::Type, Step::Version, Step::Loader, Step::Customize];
 const MODPACK_STEPS: [Step; 2] = [Step::Type, Step::Modpack];
 
 pub fn step_order(choice: TypeChoice) -> &'static [Step] {
     match choice {
-        TypeChoice::OneClient => &ONECLIENT_STEPS,
+        TypeChoice::ReoClient => &REOCLIENT_STEPS,
         TypeChoice::Scratch => &SCRATCH_STEPS,
         TypeChoice::Modpack => &MODPACK_STEPS,
     }

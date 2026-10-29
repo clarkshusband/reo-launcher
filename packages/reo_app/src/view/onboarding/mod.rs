@@ -62,7 +62,16 @@ pub fn onboarding_step_index(route: &Route, has_migration: bool, picks_location:
 
 static LAST_STEP: AtomicUsize = AtomicUsize::new(0);
 
-const SLIDE_DISTANCE: f32 = 44.;
+const SLIDE_DISTANCE: f32 = 56.;
+const SLIDE_TIME_MS: u64 = 440;
+/// Blur radius while a step moves fastest. It follows the slide's speed so the
+/// page sharpens as it settles, which reads as a light motion blur.
+const MOTION_BLUR: f32 = 6.;
+/// The veil paints above everything a step draws (nesting adds a layer per
+/// level and scroll bars sit 999 higher) so the whole page gets blurred, while
+/// staying under popups
+const MOTION_BLUR_LAYER: i16 = 1500;
+const ILLUSTRATION_START_SCALE: f32 = 0.86;
 
 pub(crate) fn onboarding_slide(content: impl IntoElement) -> impl IntoElement {
     let route = use_route::<Route>();
@@ -83,7 +92,7 @@ pub(crate) fn onboarding_slide(content: impl IntoElement) -> impl IntoElement {
     let anim = use_animation(|conf| {
         conf.on_creation(OnCreation::Run);
         AnimNum::new(0., 1.)
-            .time(320)
+            .time(SLIDE_TIME_MS)
             .ease(Ease::Out)
             .function(Function::Cubic)
     });
@@ -108,11 +117,33 @@ pub(crate) fn onboarding_slide(content: impl IntoElement) -> impl IntoElement {
         0.
     };
     let opacity = if motion && !anim_finished { p } else { 1. };
+    // A cubic ease-out moves at a speed proportional to (1 - p)^(2/3)
+    let blur = if motion && !anim_finished {
+        MOTION_BLUR * (1. - p).powf(2. / 3.)
+    } else {
+        0.
+    };
 
+    // The veil goes first: an absolute child is sized from the space its earlier
+    // siblings leave, and the page takes all of it. Its layer still paints it on top
     rect()
         .width(Size::fill())
         .height(Size::flex(1.0))
+        .maybe_child((blur > 0.25).then(|| motion_blur_veil(blur)))
         .child(entrance_motion_layer(slide_x, 0., opacity, content))
+        .into_element()
+}
+
+/// Blurs whatever the moving page painted beneath it without taking pointer
+/// events, so the step stays clickable mid-transition
+fn motion_blur_veil(blur: f32) -> Element {
+    rect()
+        .width(Size::fill())
+        .height(Size::fill())
+        .position(Position::new_absolute().top(0.).left(0.))
+        .layer(Layer::Relative(MOTION_BLUR_LAYER))
+        .interactive(false)
+        .backdrop_blur(blur)
         .into_element()
 }
 
@@ -156,7 +187,24 @@ pub(crate) fn onboarding_page(
 }
 
 pub(crate) fn onboarding_illustration(icon: IconType) -> impl IntoElement {
-    Icon::new(icon).size(240.).color(Color::WHITE)
+    let motion = !*use_onboarding_selection().reduce_motion.read();
+
+    // Back easing overshoots a touch past full size before settling, a small pop
+    let pop = use_animation(|conf| {
+        conf.on_creation(OnCreation::Run);
+        AnimNum::new(ILLUSTRATION_START_SCALE, 1.)
+            .time(620)
+            .ease(Ease::Out)
+            .function(Function::Back)
+    });
+    let running = *pop.is_running().read();
+
+    let illustration = rect().child(Icon::new(icon).size(240.).color(Color::WHITE));
+    if motion && running {
+        illustration.scale(pop.get().value())
+    } else {
+        illustration
+    }
 }
 
 pub(crate) fn onboarding_nav(

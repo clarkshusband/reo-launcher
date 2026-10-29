@@ -21,7 +21,7 @@ pub fn heading(picks: &Picks) -> (&'static str, String) {
         Step::Version => (
             "Choose a version",
             match picks.choice {
-                TypeChoice::OneClient => {
+                TypeChoice::ReoClient => {
                     "Only versions Reo Launcher ships a build for are listed.".to_string()
                 }
                 TypeChoice::Scratch | TypeChoice::Modpack => {
@@ -50,7 +50,7 @@ pub fn heading(picks: &Picks) -> (&'static str, String) {
 pub fn footer_note(picks: &Picks) -> String {
     match picks.step {
         Step::Type => match picks.choice {
-            TypeChoice::OneClient => {
+            TypeChoice::ReoClient => {
                 "Shares its game folder, worlds and packs with your other Reo Launcher instances."
                     .to_string()
             }
@@ -92,7 +92,7 @@ pub fn footer_note(picks: &Picks) -> String {
 pub fn step_value(wizard: Wizard, picks: &Picks, step: Step) -> String {
     match step {
         Step::Type => match picks.choice {
-            TypeChoice::OneClient => "Reo Launcher".to_string(),
+            TypeChoice::ReoClient => "Reo Launcher".to_string(),
             TypeChoice::Scratch => "From scratch".to_string(),
             TypeChoice::Modpack => "Modpack".to_string(),
         },

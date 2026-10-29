@@ -14,11 +14,9 @@ Fixes #
 ## Documentation
 
 <!--
-Does this PR require updates to the documentation at docs.polyfrost.org?
+Does this PR require updates to the documentation (README, CONTRIBUTING)?
 * Yes
-  * 1. Please create a docs issue: https://github.com/Polyfrost/Nexus/issues/new?assignees=&labels=bug&template=new_feature.yml
-  * 2. Make sure this api is cross compatible with the existing api (or at least documented as such, see our policy on cross compatibility at https://contributing.polyfrost.org/)
-  * 2. Paste the link to the docs issue below this comment
+  * Update the docs in this PR, or describe what needs changing below this comment
 * No
   * Are you sure? If so, nothing to do here.
 -->

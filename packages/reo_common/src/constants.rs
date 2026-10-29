@@ -18,22 +18,19 @@ pub const SKYCLIENT_BASE_URL: &str =
     "https://raw.githubusercontent.com/SkyblockClient/SkyblockClient-REPO/refs/heads/main/v1";
 pub const META_URL_BASE: &str = "https://data-v2.polyfrost.org";
 /// Reo-hosted bundle catalog (metadata.json + generated/*.mrpack).
-/// Kept separate from META_URL_BASE so version manifests, TOS and the bad-mods
-/// list keep coming from the live Polyfrost endpoints.
-pub const BUNDLES_URL_BASE: &str = "https://raw.githubusercontent.com/drako1k/reo-launcher/main";
-pub const TOS_URL: &str = "https://polyfrost.org/legal/terms";
-pub const PRIVACY_URL: &str = "https://polyfrost.org/legal/privacy";
+/// Kept separate from META_URL_BASE so version manifests and the bad-mods list
+/// keep coming from the live Polyfrost endpoints. The Terms and Privacy Policy
+/// are bundled from `legal/` instead.
+pub const BUNDLES_URL_BASE: &str = "https://raw.githubusercontent.com/clarkshusband/reo-launcher/main";
+pub const TOS_URL: &str = "https://github.com/clarkshusband/reo-launcher/blob/main/legal/TERMS.md";
+pub const PRIVACY_URL: &str = "https://github.com/clarkshusband/reo-launcher/blob/main/legal/PRIVACY.md";
 pub const PLUS_BACKEND_URL: &str = "https://plus.polyfrost.org";
 
-// The ONECLIENT_ name is still honoured so existing build setups keep working
-pub const SENTRY_DSN: &str = match option_env!("REO_SENTRY_DSN") {
+pub const SENTRY_DSN: &str = match option_env!("REOCLIENT_SENTRY_DSN") {
     Some(dsn) => dsn,
-    None => match option_env!("ONECLIENT_SENTRY_DSN") {
-        Some(dsn) => dsn,
-        None => {
-            "https://e7dff7e07427e1a28b9212cfcc8ddc1e@o4511714343124992.ingest.us.sentry.io/4511714354135040"
-        }
-    },
+    None => {
+        "https://e7dff7e07427e1a28b9212cfcc8ddc1e@o4511714343124992.ingest.us.sentry.io/4511714354135040"
+    }
 };
 
 pub const TARGET_OS: &str = cfg_select! {

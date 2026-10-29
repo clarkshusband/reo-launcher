@@ -1,5 +1,5 @@
 name: Bug report
-description: Create a report to help us improve Polyfrost. Include screenshots if possible.
+description: Create a report to help us improve Reo Launcher. Include screenshots if possible.
 labels: [bug]
 body:
   - type: markdown

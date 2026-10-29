@@ -363,7 +363,7 @@ fn can_be_materialized(path: &Path) -> bool {
 fn showing_fixture() -> bool {
     #[cfg(debug_assertions)]
     {
-        std::env::var("ONECLIENT_FAKE_STORAGE").is_ok()
+        std::env::var("REOCLIENT_FAKE_STORAGE").is_ok()
     }
 
     #[cfg(not(debug_assertions))]
@@ -417,17 +417,17 @@ pub async fn clean_cluster_leftovers(state: &LauncherState) -> LauncherResult<us
     Ok(content + natives)
 }
 
-/// Set `ONECLIENT_FAKE_STORAGE` to `empty` `clean` or `full` to return a fixture
+/// Set `REOCLIENT_FAKE_STORAGE` to `empty` `clean` or `full` to return a fixture
 /// instead of scanning disk
 /// Read on every refresh so no rebuild is needed
 #[cfg(debug_assertions)]
 fn fixture_report() -> Option<StorageReport> {
-    let scenario = std::env::var("ONECLIENT_FAKE_STORAGE").ok()?;
+    let scenario = std::env::var("REOCLIENT_FAKE_STORAGE").ok()?;
 
     let fake = |label: &str, bytes: u64| StorageEntry {
         label: label.to_string(),
         bytes,
-        path: PathBuf::from("/tmp/oneclient-fake").join(label.to_lowercase().replace(' ', "-")),
+        path: PathBuf::from("/tmp/reoclient-fake").join(label.to_lowercase().replace(' ', "-")),
         files: None,
     };
 
@@ -497,7 +497,7 @@ fn fixture_report() -> Option<StorageReport> {
         other => {
             tracing::warn!(
                 scenario = other,
-                "unknown ONECLIENT_FAKE_STORAGE value; expected empty, clean or full"
+                "unknown REOCLIENT_FAKE_STORAGE value; expected empty, clean or full"
             );
             return None;
         }

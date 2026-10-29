@@ -35,7 +35,7 @@ fn create_action(wizard: Wizard, picks: &Picks) -> Option<ClusterAction> {
         description: wizard.details.description_value(),
         tags: wizard.details.tags.read().clone(),
         cover_source: wizard.details.cover.read().clone(),
-        bundles: (picks.kind == ClusterKind::OneClient && picks.bundles.loaded)
+        bundles: (picks.kind == ClusterKind::ReoClient && picks.bundles.loaded)
             .then(|| picks.bundles.taken()),
     })
 }
@@ -52,7 +52,7 @@ fn wizard_rail(wizard: Wizard, picks: &Picks) -> Element {
 
     let subtitle = if description.is_empty() {
         match picks.choice {
-            TypeChoice::OneClient => match &picks.versions.chosen {
+            TypeChoice::ReoClient => match &picks.versions.chosen {
                 Some(version) => format!("Reo Launcher · {version}"),
                 None => "Reo Launcher".to_string(),
             },
@@ -125,7 +125,7 @@ impl Component for CreateInstanceModal {
         let mutation = use_cluster_mutation();
         let wizard = Wizard {
             step: use_state(|| 0usize),
-            choice: use_state(|| TypeChoice::OneClient),
+            choice: use_state(|| TypeChoice::ReoClient),
             version: use_state(|| None::<String>),
             filter: use_state(|| kind_bit(GameVersionKind::Release)),
             query: use_state(String::new),

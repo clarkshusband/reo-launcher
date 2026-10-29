@@ -33,7 +33,8 @@ pub use actions::{
 pub use queries::ALL_VERSIONS;
 pub(crate) use queries::use_folder_watch;
 pub use queries::{
-    AddOfflineAccountKeys, AvailableBundlesQuery, BROWSE_PAGE_SIZE, BeginMicrosoftLoginMutation,
+    AddOfflineAccountKeys, AddOfflineAccountMutation, AvailableBundlesQuery, BROWSE_PAGE_SIZE,
+    BeginMicrosoftLoginMutation,
     CachedImageQuery, CancelMicrosoftLoginKeys, CancelMicrosoftLoginMutation, ClusterAction,
     ClusterBundles, ClusterLogsQuery, ClusterMutation, DisableWarningsQuery, DiscardLeftoversKeys,
     DiscardLeftoversMutation, FinishMicrosoftLoginMutation, GameVersion, JavaMajorsQuery,

@@ -581,14 +581,17 @@ mod tests {
         }
     }
 
-    /// Keyed by the bundle's name as override rows are, not its category
+    /// Overrides are stored under the bundle's manifest name not its category
     fn overridden(
+        bundles: &[BundleWithUpdateStatus],
         project_id: &str,
         override_type: OverrideType,
     ) -> HashMap<(String, String), String> {
-        let bundle_name = archive("performance", true, Vec::new()).manifest.name;
         HashMap::from([(
-            (bundle_name, project_id.to_string()),
+            (
+                bundles[0].archive.manifest.name.clone(),
+                project_id.to_string(),
+            ),
             override_type.as_str().to_string(),
         )])
     }
@@ -748,10 +751,11 @@ mod tests {
 
     #[test]
     fn a_disabled_override_on_an_unlinked_pin_offers_enable() {
+        let performance = bundles(vec![managed("sodium", "v1")]);
         let map = super::installed_map(
             Vec::new(),
-            &bundles(vec![managed("sodium", "v1")]),
-            &overridden("sodium", OverrideType::Disabled),
+            &performance,
+            &overridden(&performance, "sodium", OverrideType::Disabled),
         );
 
         let sodium = entry(&map, "sodium");
