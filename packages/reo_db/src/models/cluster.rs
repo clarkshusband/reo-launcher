@@ -7,8 +7,10 @@ pub type ClusterId = i64;
 #[serde(rename_all = "snake_case")]
 #[repr(i64)]
 pub enum ClusterKind {
+    /// Still serialized as `one_client`, the name data written before the rename uses
     #[default]
-    OneClient = 0,
+    #[serde(rename = "one_client")]
+    ReoClient = 0,
     Vanilla = 1,
     Modded = 2,
 }
@@ -20,7 +22,7 @@ impl ClusterKind {
 
     pub fn from_repr(value: i64) -> Option<Self> {
         match value {
-            0 => Some(Self::OneClient),
+            0 => Some(Self::ReoClient),
             1 => Some(Self::Vanilla),
             2 => Some(Self::Modded),
             _ => None,
@@ -28,11 +30,11 @@ impl ClusterKind {
     }
 
     pub fn is_isolated(self) -> bool {
-        self != Self::OneClient
+        self != Self::ReoClient
     }
 
     pub fn uses_bundles(self) -> bool {
-        self == Self::OneClient
+        self == Self::ReoClient
     }
 }
 

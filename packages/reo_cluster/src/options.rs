@@ -30,7 +30,7 @@ impl CreateClusterOptions {
             mc_loader,
             mc_loader_version: None,
             mem_max: None,
-            kind: ClusterKind::OneClient,
+            kind: ClusterKind::ReoClient,
             user_created: false,
             modpack: false,
             description: None,

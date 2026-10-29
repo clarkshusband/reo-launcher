@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 fn isolate_launcher_dir() {
     reo_common::paths::set_launcher_dir(
-        std::env::temp_dir().join(format!("oneclient-auth-test-{}", Uuid::new_v4())),
+        std::env::temp_dir().join(format!("reoclient-auth-test-{}", Uuid::new_v4())),
     );
 }
 
@@ -28,17 +28,18 @@ fn offline_uuid_matches_vanilla_algorithm() {
 }
 
 #[tokio::test]
-async fn offline_account_blocked_without_microsoft() {
+async fn offline_account_allowed_without_microsoft() {
     isolate_launcher_dir();
 
     let mut store = CredentialsStore::default();
-    let err = store.add_offline_account("Steve".into()).unwrap_err();
+    let offline = store.add_offline_account("Steve".into()).unwrap();
 
-    assert!(err.to_string().contains("Microsoft"));
+    assert_eq!(offline.kind, AccountKind::Offline);
+    assert_eq!(offline.username, "Steve");
 }
 
 #[tokio::test]
-async fn offline_account_allowed_when_microsoft_exists() {
+async fn offline_account_still_allowed_when_microsoft_exists() {
     isolate_launcher_dir();
 
     let mut store = CredentialsStore::default();
@@ -51,20 +52,21 @@ async fn offline_account_allowed_when_microsoft_exists() {
 }
 
 #[tokio::test]
-async fn default_offline_fails_when_last_microsoft_removed() {
+async fn default_offline_survives_last_microsoft_removal() {
     isolate_launcher_dir();
 
     let mut store = CredentialsStore::default();
-    let msa = fake_microsoft_account("MsaUser");
-    let msa_id = msa.id;
-    store.users.insert(msa_id, msa);
-
     let offline = store.add_offline_account("Steve".into()).unwrap();
     store.default_user = Some(offline.id);
-    store.users.remove(&msa_id);
 
-    let err = store.default_account().await.unwrap_err();
-    assert!(err.to_string().contains("Microsoft"));
+    let returned = store
+        .default_account()
+        .await
+        .expect("an offline default must stay usable without any Microsoft account")
+        .expect("the only account is the default");
+
+    assert_eq!(returned.id, offline.id);
+    assert_eq!(returned.kind, AccountKind::Offline);
 }
 
 #[test]

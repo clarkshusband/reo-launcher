@@ -1,7 +1,7 @@
 use freya::prelude::*;
-use reo_auth::MinecraftAccount;
+use reo_auth::{AccountKind, MinecraftAccount};
 
-use crate::components::{Avatar, Button, Icon, IconType, use_microsoft_login};
+use crate::components::{Avatar, Button, Icon, IconType, use_microsoft_login, use_offline_login};
 use crate::hooks::{try_default_account, use_current_account};
 use crate::routes::Route;
 use crate::theme::colors;
@@ -16,6 +16,8 @@ impl Component for OnboardingAccount {
     fn render(&self) -> impl IntoElement {
         let account_query = use_current_account();
         let msa = use_microsoft_login();
+        // The account made here is the one the rest of setup and the first launch use
+        let offline = use_offline_login(true);
 
         let account = try_default_account(&account_query);
         let has_account = account.is_some();
@@ -36,6 +38,7 @@ impl Component for OnboardingAccount {
                         .into_element()
                 }
             })
+            .child(offline_option(move |_| offline.open()))
             .into_element();
 
         let page = onboarding_page(
@@ -53,7 +56,35 @@ impl Component for OnboardingAccount {
             .height(Size::fill())
             .child(page)
             .maybe_child(msa.popup())
+            .maybe_child(offline.popup())
     }
+}
+
+/// Offline accounts play singleplayer with no internet needed. Online servers
+/// still want a Microsoft account, but nothing here forces one
+fn offline_option(on_open: impl FnMut(Event<PressEventData>) + 'static) -> impl IntoElement {
+    rect()
+        .vertical()
+        .width(Size::fill())
+        .spacing(8.)
+        .child(
+            Button::new()
+                .secondary()
+                .on_press(on_open)
+                .child(Icon::new(IconType::Plus).size(16.))
+                .text("Add offline account"),
+        )
+        .child(
+            label()
+                .text(
+                    "No internet needed. Play singleplayer, LAN and offline-mode servers under \
+                     any name.",
+                )
+                .font_size(12.)
+                .width(Size::fill())
+                .color(colors::fg_secondary()),
+        )
+        .into_element()
 }
 
 fn account_preview(account: &MinecraftAccount) -> impl IntoElement {
@@ -84,13 +115,20 @@ fn account_preview(account: &MinecraftAccount) -> impl IntoElement {
                         )
                         .child(
                             label()
-                                .text(account.id.to_string())
+                                .text(format!("{} · {}", kind_label(account.kind), account.id))
                                 .font_size(12.)
                                 .color(colors::fg_secondary()),
                         ),
                 ),
         )
         .into_element()
+}
+
+fn kind_label(kind: AccountKind) -> &'static str {
+    match kind {
+        AccountKind::Microsoft => "Microsoft",
+        AccountKind::Offline => "Offline",
+    }
 }
 
 fn sign_in_card(

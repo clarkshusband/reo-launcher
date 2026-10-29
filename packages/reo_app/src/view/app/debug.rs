@@ -223,7 +223,7 @@ impl Component for ToastController {
     fn render(&self) -> impl IntoElement {
         let dispatch = use_dispatch();
         let title = use_state(|| "Downloading assets".to_string());
-        let body = use_state(|| "PolyBlock by Polyfrost".to_string());
+        let body = use_state(|| "PolyBlock by drako".to_string());
         let mut progress = use_state(|| 0u64);
 
         let info = dispatch.clone();
@@ -791,7 +791,7 @@ const STATUS_PRESETS: [(&str, IconType, ServiceStatus); 4] = [
         },
     ),
     (
-        "Polyfrost down",
+        "Services down",
         IconType::AlertCircle,
         ServiceStatus {
             online: true,

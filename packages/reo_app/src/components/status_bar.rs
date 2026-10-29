@@ -55,7 +55,7 @@ impl Issue {
             Self::McAuthDown => {
                 "Minecraft authentication servers are unreachable. Logging in may fail.".to_string()
             }
-            Self::PolyfrostDown => "Polyfrost services are experiencing issues.".to_string(),
+            Self::PolyfrostDown => "Reo Launcher services are experiencing issues.".to_string(),
         }
     }
 

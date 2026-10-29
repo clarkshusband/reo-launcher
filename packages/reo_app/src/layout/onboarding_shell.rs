@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use freya::animation::*;
 use freya::prelude::*;
 use freya::router::{Outlet, use_route};
 
@@ -49,6 +50,21 @@ impl Component for OnboardingShell {
         let onboarded = use_settings_snapshot().settings.seen_onboarding;
         let reconsent = onboarded && matches!(&route, Route::OnboardingTerms {});
 
+        let filled = ((step_index + 1) as f32
+            / onboarding_total(detected_migration, choosing_location) as f32)
+            * 100.;
+        let progress = use_animation_transition(filled, |from, to| {
+            AnimNum::new(from, to)
+                .time(520)
+                .ease(Ease::Out)
+                .function(Function::Expo)
+        });
+        let shown_filled = if *reduce_motion.read() {
+            filled
+        } else {
+            progress.get().value()
+        };
+
         let bundles = use_onboarding_bundles();
 
         use_side_effect(move || {
@@ -79,13 +95,7 @@ impl Component for OnboardingShell {
                     .height(Size::fill())
                     .content(Content::Flex)
                     .layer(Layer::Relative(30))
-                    .maybe_child((!reconsent).then(|| {
-                        progress_bar(
-                            step_index,
-                            onboarding_total(detected_migration, choosing_location),
-                        )
-                        .into_element()
-                    }))
+                    .maybe_child((!reconsent).then(|| progress_bar(shown_filled).into_element()))
                     .child(OnboardingNavbar)
                     .child(
                         rect()
@@ -99,9 +109,7 @@ impl Component for OnboardingShell {
     }
 }
 
-fn progress_bar(step_index: usize, total: usize) -> impl IntoElement {
-    let filled = ((step_index + 1) as f32 / total as f32) * 100.;
-
+fn progress_bar(filled: f32) -> impl IntoElement {
     rect()
         .width(Size::fill())
         .height(Size::px(3.))
@@ -120,7 +128,7 @@ fn copyright() -> impl IntoElement {
         .interactive(false)
         .child(
             label()
-                .text("Design © 2026 Polyfrost. All rights reserved.")
+                .text("© 2026 drako. All rights reserved.")
                 .font_size(11.)
                 .color(colors::fg_secondary()),
         )

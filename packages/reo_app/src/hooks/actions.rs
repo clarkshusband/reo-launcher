@@ -2439,7 +2439,7 @@ mod tests {
             last_played: None,
             overall_played: Duration::ZERO,
             linked_modpack_hash: None,
-            kind: reo_db::models::ClusterKind::OneClient,
+            kind: reo_db::models::ClusterKind::ReoClient,
             user_created: false,
             description: None,
             tags: Vec::new(),

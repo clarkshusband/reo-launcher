@@ -106,7 +106,7 @@ impl ClusterManager {
         global: &GameSettingsProfile,
         mut options: CreateClusterOptions,
     ) -> ClusterResult<Option<Cluster>> {
-        options.kind = ClusterKind::OneClient;
+        options.kind = ClusterKind::ReoClient;
         options.user_created = false;
 
         let _guard = self.provisioning.lock().await;

@@ -76,7 +76,7 @@ impl Component for ActiveClusterPanel {
         };
 
         let version = format!("{} {}", cluster.mc_version, cluster.mc_loader);
-        let (title, subtitle) = if cluster.user_created && cluster.kind != ClusterKind::OneClient {
+        let (title, subtitle) = if cluster.user_created && cluster.kind != ClusterKind::ReoClient {
             (cluster.name.clone(), version)
         } else {
             let subtitle = match metadata {

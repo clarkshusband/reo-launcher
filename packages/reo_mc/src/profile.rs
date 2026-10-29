@@ -356,7 +356,7 @@ mod tests {
 
     fn temp_launcher_dir() {
         let dir =
-            std::env::temp_dir().join(format!("oneclient-profile-test-{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("reoclient-profile-test-{}", uuid::Uuid::new_v4()));
         reo_common::paths::set_launcher_dir(dir);
     }
 

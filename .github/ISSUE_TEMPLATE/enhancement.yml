@@ -4,7 +4,7 @@ labels: [enhancement]
 body:
   - type: markdown
     attributes:
-      value: Before raising an issue, please search for existing issues and [Discord](https://polyfrost.org/discord) suggestions to avoid creating duplicates.
+      value: Before raising an issue, please search for existing issues and [Discord](https://discord.gg/reomc) suggestions to avoid creating duplicates.
   - type: input
     attributes:
       label: Original reporter/ticket ID

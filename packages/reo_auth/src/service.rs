@@ -239,10 +239,6 @@ impl AuthService {
         self.store.lock().await.corrupt_refresh_token(id).await
     }
 
-    pub async fn has_microsoft_account(&self) -> bool {
-        self.store.lock().await.has_microsoft_account()
-    }
-
     fn refresh_guard(&self, id: Uuid) -> Arc<Mutex<()>> {
         Arc::clone(
             self.refresh_guards
@@ -371,23 +367,17 @@ impl AuthService {
 
     #[tracing::instrument(level = "debug", skip(self), fields(%id))]
     pub async fn account_for_launch(&self, id: Uuid) -> AuthResult<MinecraftAccount> {
-        let account = match self.renew_token(id, false).await {
-            Ok(account) => account,
+        match self.renew_token(id, false).await {
+            Ok(account) => Ok(account),
             // A signed-out account still plays under its saved name and uuid
             // with an empty token like an offline account singleplayer works
             // and the UI keeps asking for a sign-in
             Err(AuthError::SessionExpired { username }) => {
                 tracing::info!(%username, "launching signed-out account without a token");
-                self.account_snapshot(id).await?
+                self.account_snapshot(id).await
             }
-            Err(err) => return Err(err),
-        };
-
-        if account.is_offline() && !self.has_microsoft_account().await {
-            return Err(AuthError::OfflineRequiresMicrosoft);
+            Err(err) => Err(err),
         }
-
-        Ok(account)
     }
 
     #[tracing::instrument(level = "debug", skip_all)]

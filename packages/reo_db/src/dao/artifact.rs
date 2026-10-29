@@ -68,7 +68,7 @@ pub async fn delete_artifact_if_unused(pool: &SqlitePool, hash: &str) -> Result<
 
 use crate::models::GlobalArtifactRow;
 
-/// One row per hash across the OneClient clusters for content that is installed globally
+/// One row per hash across the ReoClient clusters for content that is installed globally
 ///
 /// `enabled` is the OR over the clusters: one cluster still having a pack on is
 /// enough to keep it in the folder, because there is one folder and it can only
@@ -97,7 +97,7 @@ pub async fn list_global_artifacts(
 		"#,
     )
     .bind(content_type)
-    .bind(ClusterKind::OneClient.as_i64())
+    .bind(ClusterKind::ReoClient.as_i64())
     .fetch_all(pool)
     .await
 }
@@ -120,7 +120,7 @@ pub async fn set_enabled_for_hash(
     )
     .bind(enabled)
     .bind(hash)
-    .bind(ClusterKind::OneClient.as_i64())
+    .bind(ClusterKind::ReoClient.as_i64())
     .execute(pool)
     .await?;
 
@@ -329,7 +329,7 @@ pub async fn is_launcher_owned(pool: &SqlitePool, hash: &str) -> Result<bool, sq
 		"#,
     )
     .bind(hash)
-    .bind(ClusterKind::OneClient.as_i64())
+    .bind(ClusterKind::ReoClient.as_i64())
     .fetch_one(pool)
     .await?;
 

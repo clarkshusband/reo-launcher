@@ -65,7 +65,7 @@ pub enum RequestError {
 
     #[error(
         "Reo Launcher did not contact {url} because the Terms of Service and Privacy Policy were \
-         declined. Accept them in Settings to turn Polyfrost services back on."
+         declined. Accept them in Settings to turn online services back on."
     )]
     ConsentRequired { url: String },
 

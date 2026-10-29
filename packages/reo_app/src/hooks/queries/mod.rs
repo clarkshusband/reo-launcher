@@ -39,8 +39,8 @@ pub use analytics::{
     try_cluster_analytics, try_global_analytics, use_cluster_analytics, use_global_analytics,
 };
 pub use auth::{
-    AddOfflineAccountKeys, BeginMicrosoftLoginMutation, CancelMicrosoftLoginKeys,
-    CancelMicrosoftLoginMutation, FinishMicrosoftLoginMutation, RefreshAccountKeys,
+    AddOfflineAccountKeys, AddOfflineAccountMutation, BeginMicrosoftLoginMutation,
+    CancelMicrosoftLoginKeys, CancelMicrosoftLoginMutation, FinishMicrosoftLoginMutation, RefreshAccountKeys,
     RemoveAccountKeys, SetDefaultAccountKeys, UseRefreshAccount, UseRemoveAccount,
     UseSetDefaultAccount, accounts_have_microsoft, invalidate_auth_queries,
     login_code_already_handled, mutation_error, mutation_is_pending, mutation_is_running,

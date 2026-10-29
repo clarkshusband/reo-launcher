@@ -439,7 +439,7 @@ mod tests {
             last_played: None,
             overall_played: std::time::Duration::ZERO,
             linked_modpack_hash: None,
-            kind: reo_cluster::ClusterKind::OneClient,
+            kind: reo_cluster::ClusterKind::ReoClient,
             user_created: true,
             description: None,
             tags: Vec::new(),

@@ -56,7 +56,7 @@ pub fn body(wizard: Wizard, picks: &Picks) -> Element {
 fn type_step(mut wizard: Wizard, picks: &Picks) -> Element {
     let cards = [
         (
-            TypeChoice::OneClient,
+            TypeChoice::ReoClient,
             IconType::IconLogo,
             "Reo Launcher",
             Some("Recommended"),
@@ -291,7 +291,7 @@ fn version_controls(mut wizard: Wizard, picks: &Picks) -> Element {
                     .leading(Icon::new(IconType::SearchMd).size(14.)),
             ),
         )
-        .maybe_child((picks.choice != TypeChoice::OneClient).then(|| {
+        .maybe_child((picks.choice != TypeChoice::ReoClient).then(|| {
             rect()
                 .horizontal()
                 .cross_align(Alignment::Center)
@@ -398,7 +398,7 @@ fn list_reset_key(picks: &Picks, needle: &str) -> u64 {
     use std::hash::{Hash, Hasher};
 
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    matches!(picks.choice, TypeChoice::OneClient).hash(&mut hasher);
+    matches!(picks.choice, TypeChoice::ReoClient).hash(&mut hasher);
     picks.versions.filter.hash(&mut hasher);
     needle.hash(&mut hasher);
     hasher.finish()

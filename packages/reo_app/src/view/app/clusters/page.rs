@@ -48,7 +48,7 @@ const ART_MIN_SIDEBAR_PX: f32 = 420.;
 #[derive(Clone, Copy, PartialEq)]
 enum Filter {
     All,
-    OneClient,
+    ReoClient,
     Custom,
     Modpacks,
 }
@@ -236,7 +236,7 @@ impl Component for Clusters {
         );
         let shown_lines: Vec<ReleaseLine> =
             shown(&line_heads.iter().collect::<Vec<_>>(), sort_by, |c| {
-                active_filter.shows(Filter::OneClient)
+                active_filter.shows(Filter::ReoClient)
                     && ReleaseLine::for_cluster(c).is_some_and(|l| groups[&l].iter().any(matches))
             })
             .into_iter()
@@ -264,7 +264,7 @@ impl Component for Clusters {
 
         let tabs = [
             (Filter::All, "All"),
-            (Filter::OneClient, "Reo Launcher"),
+            (Filter::ReoClient, "Reo Launcher"),
             (Filter::Custom, "Custom"),
             (Filter::Modpacks, "Modpacks"),
         ]

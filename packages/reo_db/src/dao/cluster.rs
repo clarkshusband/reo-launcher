@@ -58,7 +58,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<ClusterRow>, sqlx::Error>
 
 pub async fn list_reo_ids(pool: &SqlitePool) -> Result<Vec<i64>, sqlx::Error> {
     sqlx::query_scalar("SELECT id FROM clusters WHERE kind = ?")
-        .bind(ClusterKind::OneClient.as_i64())
+        .bind(ClusterKind::ReoClient.as_i64())
         .fetch_all(pool)
         .await
 }

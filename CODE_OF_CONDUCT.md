@@ -63,8 +63,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement via
-[our Discord server](https://polyfrost.org/discord), or via
-[email](mailto:coc@polyfrost.org).
+[our Discord server](https://discord.gg/reomc).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
