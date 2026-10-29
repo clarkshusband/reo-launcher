@@ -21,7 +21,9 @@ pub const META_URL_BASE: &str = "https://data-v2.polyfrost.org";
 /// Kept separate from META_URL_BASE so version manifests and the bad-mods list
 /// keep coming from the live Polyfrost endpoints. The Terms and Privacy Policy
 /// are bundled from `legal/` instead.
-pub const BUNDLES_URL_BASE: &str = "https://raw.githubusercontent.com/clarkshusband/reo-launcher/main";
+/// Hosted in drako1k/reo-launcher along with the ReoMods jars it lists, even
+/// though releases ship from clarkshusband/reo-launcher.
+pub const BUNDLES_URL_BASE: &str = "https://raw.githubusercontent.com/drako1k/reo-launcher/main";
 pub const TOS_URL: &str = "https://github.com/clarkshusband/reo-launcher/blob/main/legal/TERMS.md";
 pub const PRIVACY_URL: &str = "https://github.com/clarkshusband/reo-launcher/blob/main/legal/PRIVACY.md";
 pub const PLUS_BACKEND_URL: &str = "https://plus.polyfrost.org";
