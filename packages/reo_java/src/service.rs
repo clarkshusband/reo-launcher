@@ -497,7 +497,10 @@ pub(crate) fn parse_major_version(version: &str) -> Result<u32, JavaError> {
         });
     }
 
-    let head = version.split(['.', '-', '+', '_']).next().unwrap_or(version);
+    let head = version
+        .split(['.', '-', '+', '_'])
+        .next()
+        .unwrap_or(version);
     head.parse::<u32>().map_err(|_| JavaError::ParseVersion {
         version: version.to_string(),
     })

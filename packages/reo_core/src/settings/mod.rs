@@ -3,9 +3,7 @@ mod launcher;
 pub mod data_dir;
 
 pub use launcher::{LaunchBehaviour, LauncherSettings, ViewLayout, ViewState};
-pub use reo_cluster::{
-    GameSettingsProfile, PackageUpdateMode, ProfileUpdate, SettingsOsExtra,
-};
+pub use reo_cluster::{GameSettingsProfile, PackageUpdateMode, ProfileUpdate, SettingsOsExtra};
 pub use reo_common::Resolution;
 
 pub mod store;

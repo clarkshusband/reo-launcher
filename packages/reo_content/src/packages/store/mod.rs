@@ -31,9 +31,9 @@ use super::types::{
 use super::{local_manifest, metadata_cache};
 use crate::ctx::ContentCtx;
 use crate::error::{ContentError, ContentResult};
+use polyio::{normalize_hash, sha1_file};
 use reo_common::paths as common_paths;
 use reo_events::GroupedProgressChild;
-use polyio::{normalize_hash, sha1_file};
 use std::path::{Path, PathBuf};
 
 pub struct PackageStore;

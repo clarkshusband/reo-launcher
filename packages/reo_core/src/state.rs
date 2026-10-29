@@ -182,9 +182,7 @@ pub fn run_startup_tasks(state: &Arc<LauncherState>) {
         // Must run last judging an artifact unused before recovery bundle
         // tracking and provisioning have restored their rows would evict
         // content still in use Only the row-driven half runs unattended
-        if let Err(err) =
-            reo_content::packages::store::collect_unused_artifacts(&content).await
-        {
+        if let Err(err) = reo_content::packages::store::collect_unused_artifacts(&content).await {
             tracing::warn!("package cache cleanup failed: {err:#}");
         }
 

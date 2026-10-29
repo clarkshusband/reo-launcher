@@ -4,9 +4,7 @@ use freya::query::{
     Mutation, MutationCapability, QueriesStorage, Query, QueryCapability, UseMutation, UseQuery,
     use_mutation, use_query,
 };
-use reo_core::{
-    LauncherError, LogFileInfo, LogLevel, LogLine, MclogsUploadResponse, ReadOptions,
-};
+use reo_core::{LauncherError, LogFileInfo, LogLevel, LogLine, MclogsUploadResponse, ReadOptions};
 
 use crate::launcher::{off_ui, off_ui_blocking};
 
@@ -110,10 +108,10 @@ impl MutationCapability for UploadLogMutation {
     async fn run(&self, keys: &Self::Keys) -> Result<Self::Ok, Self::Err> {
         let state = crate::launcher::state()?;
         let path = keys.path.clone();
-        Ok(off_ui(
-            async move { reo_core::upload_log_at(&state.services.requester, &path).await },
+        Ok(
+            off_ui(async move { reo_core::upload_log_at(&state.services.requester, &path).await })
+                .await?,
         )
-        .await?)
     }
 }
 

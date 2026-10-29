@@ -120,10 +120,7 @@ fn internal_locate_java() -> Vec<PathBuf> {
     // Each IDE bundles the JetBrains Runtime in its own jbr folder
     if let Ok(ides) = std::fs::read_dir(program_files.join("JetBrains")) {
         for ide in ides.flatten() {
-            let java_exe = ide
-                .path()
-                .join("jbr")
-                .join(java_executable_relative_path());
+            let java_exe = ide.path().join("jbr").join(java_executable_relative_path());
             if java_exe.exists() {
                 java_homes.push(java_exe);
             }

@@ -1352,9 +1352,7 @@ async fn seed_opt_in_bundle(state: &LauncherState, name: &str) {
 
 async fn seed_bundle_with_pack(state: &LauncherState, m: BundleManifest) {
     let name = &m.name.clone();
-    reo_core::dev::seed_bundle_archive(state, m)
-        .await
-        .unwrap();
+    reo_core::dev::seed_bundle_archive(state, m).await.unwrap();
 
     let dir = reo_common::paths::data_dir().unwrap().join("bundles");
     std::fs::create_dir_all(&dir).unwrap();
@@ -1380,13 +1378,9 @@ async fn taking_a_bundle_at_the_prompt_records_the_choice() {
 
     assert_eq!(pending().await, ["Opt In".to_string()]);
 
-    reo_content::bundles::set_bundle_choices(
-        cluster_id,
-        &[("Opt In".to_string(), false)],
-        &ctx,
-    )
-    .await
-    .unwrap();
+    reo_content::bundles::set_bundle_choices(cluster_id, &[("Opt In".to_string(), false)], &ctx)
+        .await
+        .unwrap();
     assert!(pending().await.is_empty());
 }
 
@@ -1414,13 +1408,9 @@ async fn turning_a_bundle_down_removes_what_it_installed() {
     .await
     .unwrap();
 
-    reo_content::bundles::set_bundle_choices(
-        cluster_id,
-        &[(BUNDLE.to_string(), false)],
-        &ctx,
-    )
-    .await
-    .unwrap();
+    reo_content::bundles::set_bundle_choices(cluster_id, &[(BUNDLE.to_string(), false)], &ctx)
+        .await
+        .unwrap();
     let tracked = bundle_dao::list_bundle_tracked(&state.services.db, cluster_id)
         .await
         .unwrap();
@@ -1447,12 +1437,7 @@ async fn skyblock_nobody_asked_for_is_taken_out_of_an_old_26_3_cluster_once() {
         bundle_dao::track_bundle_artifact(db, cluster_id, HASH, SKYBLOCK, VERSION_ID, PROJECT_ID)
     };
     let apply = || {
-        reo_content::bundles::apply_bundle_updates(
-            cluster_id,
-            state.bundles.as_ref(),
-            &ctx,
-            None,
-        )
+        reo_content::bundles::apply_bundle_updates(cluster_id, state.bundles.as_ref(), &ctx, None)
     };
     track().await.unwrap();
     bundle_dao::save_bundle_choices(db, cluster_id, &[(SKYBLOCK.to_string(), true)])
@@ -1562,13 +1547,9 @@ async fn an_opt_in_bundle_counts_as_taken_only_on_a_recorded_choice() {
 
     assert!(!taken().await.contains("Opt In"));
 
-    reo_content::bundles::set_bundle_choices(
-        cluster_id,
-        &[("Opt In".to_string(), true)],
-        &ctx,
-    )
-    .await
-    .unwrap();
+    reo_content::bundles::set_bundle_choices(cluster_id, &[("Opt In".to_string(), true)], &ctx)
+        .await
+        .unwrap();
     assert!(taken().await.contains("Opt In"));
 }
 

@@ -412,10 +412,7 @@ pub fn parse_minecraft_argument(
         .replace("${auth_xuid}", "0")
         .replace("${auth_uuid}", &uuid.simple().to_string())
         .replace("${uuid}", &uuid.simple().to_string())
-        .replace(
-            "${clientid}",
-            reo_common::constants::MICROSOFT_CLIENT_ID,
-        )
+        .replace("${clientid}", reo_common::constants::MICROSOFT_CLIENT_ID)
         .replace("${user_properties}", "{}")
         .replace("${user_type}", "msa")
         .replace("${version_name}", version)
@@ -1266,7 +1263,10 @@ mod tests {
         let args = legacy_args(Resolution::new(1920, 1080));
 
         let width = args.iter().position(|a| a == "--width").expect("no width");
-        let height = args.iter().position(|a| a == "--height").expect("no height");
+        let height = args
+            .iter()
+            .position(|a| a == "--height")
+            .expect("no height");
         assert_eq!(args[width + 1], "1920");
         assert_eq!(args[height + 1], "1080");
     }
@@ -1300,8 +1300,14 @@ mod tests {
         )
         .unwrap();
 
-        assert!(args.contains(&"-Dlauncher.brand=Reo Launcher".to_string()), "{args:?}");
-        assert!(args.contains(&"-Dos.name=Windows 10".to_string()), "{args:?}");
+        assert!(
+            args.contains(&"-Dlauncher.brand=Reo Launcher".to_string()),
+            "{args:?}"
+        );
+        assert!(
+            args.contains(&"-Dos.name=Windows 10".to_string()),
+            "{args:?}"
+        );
         assert!(args.contains(&"-Dos.version=10.0".to_string()), "{args:?}");
     }
 
@@ -1315,9 +1321,7 @@ mod tests {
         let _ = std::fs::remove_file(&missing);
 
         let jvm = [&present, &missing]
-            .map(|path| {
-                Argument::Normal(format!("-Dlog4j.configurationFile={}", path.display()))
-            })
+            .map(|path| Argument::Normal(format!("-Dlog4j.configurationFile={}", path.display())))
             .to_vec();
 
         let args = java_arguments(

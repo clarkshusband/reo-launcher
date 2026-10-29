@@ -1293,22 +1293,20 @@ fn run_damage(dispatch: &crate::Actions, kind: DamageKind, cluster_id: i64) {
     let dispatch = dispatch.clone();
     spawn(async move {
         let result = match kind {
-            DamageKind::Assets(count, damage) => {
-                reo_core::simulate::damage_assets(count, damage)
-                    .await
-                    .map(|report| (report, damage.verb()))
-            }
+            DamageKind::Assets(count, damage) => reo_core::simulate::damage_assets(count, damage)
+                .await
+                .map(|report| (report, damage.verb())),
             DamageKind::Libraries(count, damage) => {
                 reo_core::simulate::damage_libraries(count, damage)
                     .await
                     .map(|report| (report, damage.verb()))
             }
             DamageKind::Content(count, damage) => match crate::launcher::state() {
-                Ok(state) => reo_core::simulate::damage_cluster_content(
-                    &state, cluster_id, count, damage,
-                )
-                .await
-                .map(|report| (report, damage.verb())),
+                Ok(state) => {
+                    reo_core::simulate::damage_cluster_content(&state, cluster_id, count, damage)
+                        .await
+                        .map(|report| (report, damage.verb()))
+                }
                 Err(err) => Err(err),
             },
             DamageKind::DeleteAssetsTree => reo_core::simulate::delete_assets_tree()

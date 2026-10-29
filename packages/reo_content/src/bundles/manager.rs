@@ -217,11 +217,7 @@ impl BundlesManager {
             .to_string();
 
         let disk_path = bundles_root.join("bundles").join(&file_name);
-        let remote_url = format!(
-            "{}{}",
-            ctx.net.config().bundles_url_base,
-            entry.remote_path
-        );
+        let remote_url = format!("{}{}", ctx.net.config().bundles_url_base, entry.remote_path);
 
         download_bundle_if_needed(ctx, &remote_url, &disk_path, &entry.sha1).await?;
 

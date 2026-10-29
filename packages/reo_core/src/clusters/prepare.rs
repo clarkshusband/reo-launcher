@@ -276,13 +276,10 @@ pub async fn estimate_cluster_download(
         }
     }
 
-    total += reo_content::bundles::enabled_bundle_bytes(
-        cluster_id,
-        bundles,
-        &state.services.content(),
-    )
-    .await
-    .unwrap_or(0);
+    total +=
+        reo_content::bundles::enabled_bundle_bytes(cluster_id, bundles, &state.services.content())
+            .await
+            .unwrap_or(0);
 
     Ok(total)
 }

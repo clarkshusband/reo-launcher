@@ -449,8 +449,7 @@ pub async fn apply_bundle_updates(
     ctx: &ContentCtx,
     deadline: Option<Instant>,
 ) -> ContentResult<ApplyBundleUpdatesResult> {
-    let session =
-        reo_events::GroupedProgressSession::start(&ctx.events, "Updating bundle content");
+    let session = reo_events::GroupedProgressSession::start(&ctx.events, "Updating bundle content");
     let result =
         apply_bundle_updates_with(cluster_id, bundles, ctx, Some(&session), deadline).await;
     session.finish();

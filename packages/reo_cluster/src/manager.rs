@@ -317,7 +317,9 @@ impl ClusterManager {
                 _ => polyio::remove_file(&path).await,
             };
             match removed {
-                Ok(()) => tracing::info!(entry = %name, "cleared a leftover deleted cluster folder"),
+                Ok(()) => {
+                    tracing::info!(entry = %name, "cleared a leftover deleted cluster folder")
+                }
                 Err(err) => {
                     tracing::warn!(entry = %name, error = %err, "failed to clear a leftover deleted cluster folder")
                 }
@@ -403,12 +405,8 @@ impl ClusterManager {
         let cluster = self.get(cluster_id).await?;
 
         if !cluster.user_created {
-            cluster_dao::dismiss_provision(
-                &self.db,
-                &cluster.mc_version,
-                cluster.mc_loader as i64,
-            )
-            .await?;
+            cluster_dao::dismiss_provision(&self.db, &cluster.mc_version, cluster.mc_loader as i64)
+                .await?;
         }
 
         let trashed = if remove_files && cluster.is_isolated() {
@@ -479,7 +477,11 @@ impl ClusterManager {
         }
 
         match profile_dao::delete_by_name(&self.db, profile_name).await {
-            Ok(()) => tracing::debug!(cluster_id = cluster.id, profile = profile_name, "deleted the cluster's settings profile"),
+            Ok(()) => tracing::debug!(
+                cluster_id = cluster.id,
+                profile = profile_name,
+                "deleted the cluster's settings profile"
+            ),
             // Already gone or never created under this name
             Err(reo_db::DbError::NotFound) => {}
             Err(err) => {
@@ -605,12 +607,9 @@ async fn create_inner(
     ensure_content_dirs(cluster_path).await?;
 
     if options.kind.is_isolated() {
-        polyio::write(
-            cluster_path.join(reo_common::paths::DEDICATED_MARKER),
-            b"",
-        )
-        .await
-        .ok();
+        polyio::write(cluster_path.join(reo_common::paths::DEDICATED_MARKER), b"")
+            .await
+            .ok();
 
         crate::identity::write(
             cluster_path,
@@ -807,12 +806,18 @@ mod tests {
 
     #[test]
     fn a_folder_name_nobody_holds_is_used_as_is() {
-        assert_eq!(first_free_folder_name("Survival", &[], |_| false), "Survival");
+        assert_eq!(
+            first_free_folder_name("Survival", &[], |_| false),
+            "Survival"
+        );
     }
 
     #[test]
     fn the_global_profile_name_is_never_a_cluster_folder() {
-        assert_eq!(first_free_folder_name("Global", &[], |_| false), "Global (1)");
+        assert_eq!(
+            first_free_folder_name("Global", &[], |_| false),
+            "Global (1)"
+        );
     }
 
     #[test]

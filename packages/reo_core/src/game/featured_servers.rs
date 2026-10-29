@@ -22,7 +22,10 @@ pub fn featured_servers_argument(game_dir: &Path) -> Option<String> {
     let catalog_path = dir.join("featured_servers.json");
     std::fs::write(&catalog_path, CATALOG).ok()?;
 
-    let fetched_at = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_millis();
+    let fetched_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_millis();
     let body = serde_json::to_string(CATALOG).ok()?;
     let cache = format!(r#"{{"fetched_at":{fetched_at},"body":{body}}}"#);
     std::fs::write(dir.join("featured_servers_cache.json"), cache).ok()?;
@@ -69,8 +72,11 @@ mod tests {
         let dismissals = dir.join("polyplus/featured_server_dismissals.json");
         assert!(dismissals.exists());
 
-        std::fs::write(&dismissals, r#"{"main_menu_campaign_ids":[],"multiplayer_campaign_ids":[]}"#)
-            .unwrap();
+        std::fs::write(
+            &dismissals,
+            r#"{"main_menu_campaign_ids":[],"multiplayer_campaign_ids":[]}"#,
+        )
+        .unwrap();
         featured_servers_argument(&dir).expect("argument");
         let text = std::fs::read_to_string(&dismissals).unwrap();
         assert!(text.contains(r#""main_menu_campaign_ids":[]"#));

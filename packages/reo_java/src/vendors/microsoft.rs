@@ -2,8 +2,8 @@ use futures_util::StreamExt;
 use reqwest::{Method, Request};
 use url::Url;
 
-use reo_net::RequestClient;
 use polyio::Checksum;
+use reo_net::RequestClient;
 
 use crate::data::{JavaPackage, PackageArchive};
 use crate::error::JavaResult;
@@ -79,10 +79,7 @@ async fn resolve_package(
     let url = checksum_url(major, arch)?;
     let response = net.send(Request::new(Method::GET, url)).await?;
     let status = response.status();
-    let body = response
-        .text()
-        .await
-        .map_err(reo_net::RequestError::from)?;
+    let body = response.text().await.map_err(reo_net::RequestError::from)?;
 
     if !status.is_success() {
         tracing::debug!(

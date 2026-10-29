@@ -127,12 +127,18 @@ fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
     use std::cmp::Ordering;
 
     fn split_digits(s: &[u8]) -> (&[u8], &[u8]) {
-        let end = s.iter().position(|c| !c.is_ascii_digit()).unwrap_or(s.len());
+        let end = s
+            .iter()
+            .position(|c| !c.is_ascii_digit())
+            .unwrap_or(s.len());
         s.split_at(end)
     }
 
     fn trim_zeros(digits: &[u8]) -> &[u8] {
-        let start = digits.iter().position(|&c| c != b'0').unwrap_or(digits.len());
+        let start = digits
+            .iter()
+            .position(|&c| c != b'0')
+            .unwrap_or(digits.len());
         &digits[start..]
     }
 

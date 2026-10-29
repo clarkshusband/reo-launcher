@@ -2,8 +2,8 @@ use reqwest::{Method, Request};
 use serde_json::Value;
 use url::Url;
 
-use reo_net::RequestClient;
 use polyio::Checksum;
+use reo_net::RequestClient;
 
 use crate::data::{JavaPackage, PackageArchive};
 use crate::error::JavaResult;

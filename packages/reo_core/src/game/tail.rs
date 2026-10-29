@@ -179,10 +179,8 @@ mod tests {
 
         fn drain(&mut self) -> Vec<String> {
             let mut out = Vec::new();
-            while let Ok(reo_events::Event::Game(reo_events::GameEvent::Log {
-                line,
-                ..
-            })) = self.rx.try_recv()
+            while let Ok(reo_events::Event::Game(reo_events::GameEvent::Log { line, .. })) =
+                self.rx.try_recv()
             {
                 out.push(line);
             }
@@ -200,7 +198,14 @@ mod tests {
         let path = h.path();
         polyio::write(&path, "[12:00:00] first\n").await.unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         settle().await;
 
         let mut file = tokio::fs::OpenOptions::new()
@@ -225,7 +230,14 @@ mod tests {
             .await
             .unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         settle().await;
         tail.stop().await;
 
@@ -240,7 +252,14 @@ mod tests {
         let mut h = Harness::new().await;
         let path = h.path();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         settle().await;
         polyio::write(&path, "[12:00:00] late\n").await.unwrap();
         settle().await;
@@ -255,7 +274,14 @@ mod tests {
         let path = h.path();
         polyio::write(&path, "[12:00:00] half").await.unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         settle().await;
         // A line mid-write must not be emitted or it would arrive twice
         assert!(h.drain().is_empty());
@@ -281,7 +307,14 @@ mod tests {
             .await
             .unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         settle().await;
         assert_eq!(h.drain(), vec!["[12:00:00] old session line"]);
 
@@ -303,7 +336,14 @@ mod tests {
             .await
             .unwrap();
 
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         settle().await;
 
         // Waiting for that newline would hang the exit path forever
@@ -325,7 +365,14 @@ mod tests {
 
         // Stopping immediately as the exit path does must still flush the
         // reason the game exited
-        let tail = spawn_log_tail(7, path.clone(), h.events.clone(), None, 0, CrashWatch::new());
+        let tail = spawn_log_tail(
+            7,
+            path.clone(),
+            h.events.clone(),
+            None,
+            0,
+            CrashWatch::new(),
+        );
         tail.stop().await;
 
         assert_eq!(h.drain(), vec!["[12:00:00] Stopping!"]);

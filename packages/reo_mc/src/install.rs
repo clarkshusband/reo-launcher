@@ -158,11 +158,10 @@ fn fill_missing_log_config(info: &mut VersionInfo, game_loader: GameLoader) {
         return;
     }
 
-    let Some(log4j) = info
-        .libraries
-        .iter()
-        .find_map(|lib| lib.name.strip_prefix("org.apache.logging.log4j:log4j-core:"))
-    else {
+    let Some(log4j) = info.libraries.iter().find_map(|lib| {
+        lib.name
+            .strip_prefix("org.apache.logging.log4j:log4j-core:")
+    }) else {
         return;
     };
     let (id, sha1, size) = if log4j.starts_with("2.0-beta9") {
@@ -461,9 +460,7 @@ pub async fn plan_downloads(
                         library_artifact_size(&lib),
                     ));
             let natives = match natives_mode {
-                NativesMode::Extract => {
-                    force || !natives_extracted(&natives_dir, &lib, &java_arch)
-                }
+                NativesMode::Extract => force || !natives_extracted(&natives_dir, &lib, &java_arch),
                 NativesMode::LeaveInPlace => false,
             };
 
@@ -642,10 +639,16 @@ pub async fn check_natives(
 
     let mut report = NativesReport::default();
     for (family, verdicts) in families {
-        if verdicts.iter().any(|(v, _)| matches!(v, JarVerdict::Usable)) {
+        if verdicts
+            .iter()
+            .any(|(v, _)| matches!(v, JarVerdict::Usable))
+        {
             continue;
         }
-        if verdicts.iter().any(|(v, _)| matches!(v, JarVerdict::Unreadable)) {
+        if verdicts
+            .iter()
+            .any(|(v, _)| matches!(v, JarVerdict::Unreadable))
+        {
             if verdicts
                 .iter()
                 .any(|(v, extracted)| *extracted && matches!(v, JarVerdict::Unreadable))
@@ -1900,7 +1903,12 @@ fn processor_inputs(info: &VersionInfo) -> Option<serde_json::Value> {
     let refs = processors
         .iter()
         .flat_map(|it| &it.args)
-        .chain(info.data.iter().flatten().flat_map(|(_, it)| [&it.client, &it.server]))
+        .chain(
+            info.data
+                .iter()
+                .flatten()
+                .flat_map(|(_, it)| [&it.client, &it.server]),
+        )
         .filter_map(|it| it.strip_prefix('[')?.strip_suffix(']'));
     let named: BTreeSet<&str> = processors
         .iter()
@@ -2226,8 +2234,7 @@ mod tests {
         tokio::sync::mpsc::UnboundedReceiver<reo_events::Event>,
     ) {
         let (events, rx) = reo_events::EventBus::channel();
-        let net = reo_net::RequestClient::new(reo_net::NetConfig::default())
-            .expect("a client");
+        let net = reo_net::RequestClient::new(reo_net::NetConfig::default()).expect("a client");
         (McCtx::new(net, events), rx)
     }
 
@@ -2251,9 +2258,8 @@ mod tests {
 
         let asking = tokio::spawn(async move { confirm_incomplete_install(&ctx, 3, 0).await });
 
-        let Some(reo_events::Event::Notification(reo_events::Notification::Prompt(
-            request,
-        ))) = rx.recv().await
+        let Some(reo_events::Event::Notification(reo_events::Notification::Prompt(request))) =
+            rx.recv().await
         else {
             panic!("expected a prompt");
         };
@@ -2272,9 +2278,8 @@ mod tests {
 
         let asking = tokio::spawn(async move { confirm_incomplete_install(&ctx, 0, 2).await });
 
-        let Some(reo_events::Event::Notification(reo_events::Notification::Prompt(
-            request,
-        ))) = rx.recv().await
+        let Some(reo_events::Event::Notification(reo_events::Notification::Prompt(request))) =
+            rx.recv().await
         else {
             panic!("expected a prompt");
         };
@@ -2458,7 +2463,11 @@ mod tests {
 
         let mut pre_log4j = mirrored_version(None, main);
         fill_missing_log_config(&mut pre_log4j, GameLoader::Vanilla);
-        assert_eq!(filled_config_id(&pre_log4j), None, "1.6 and older have no log4j");
+        assert_eq!(
+            filled_config_id(&pre_log4j),
+            None,
+            "1.6 and older have no log4j"
+        );
     }
 
     #[test]
@@ -2495,7 +2504,9 @@ mod tests {
         assert!(!plain.contains("XMLLayout"), "{plain}");
         assert_eq!(
             plain
-                .matches(r#"<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />"#)
+                .matches(
+                    r#"<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />"#
+                )
                 .count(),
             2,
             "{plain}"

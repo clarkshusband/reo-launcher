@@ -1,9 +1,7 @@
 use reo_common::domain::{ContentType, GameLoader};
 use reo_content::packages::types::ExternalFile;
 use reo_core::clusters::{Cluster, ClusterStage};
-use reo_core::{
-    Bundle, BundleArchive, BundleFile, BundleFileKind, BundleFileType, BundleManifest,
-};
+use reo_core::{Bundle, BundleArchive, BundleFile, BundleFileKind, BundleFileType, BundleManifest};
 use std::path::PathBuf;
 
 pub fn file(package_id: &str, enabled: bool, hidden: bool) -> BundleFile {

@@ -180,9 +180,7 @@ fn main() {
         tracing::warn!("no single-instance endpoint, a second launcher can start: {reason}");
     }
 
-    match reo_app::shortcut::launcher_exe()
-        .and_then(|exe| reo_app::protocol::register(&exe))
-    {
+    match reo_app::shortcut::launcher_exe().and_then(|exe| reo_app::protocol::register(&exe)) {
         Ok(()) => {}
         Err(err) => tracing::warn!(
             "could not register the {}:// handler: {err:#}",

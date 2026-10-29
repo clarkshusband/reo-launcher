@@ -205,9 +205,9 @@ mod tests {
 
     #[test]
     fn one_bad_field_resets_only_itself() {
-        let raw = r#"{"max_concurrent_requests":"25","seen_onboarding":true,"accepted_tos_version":3}"#;
-        let (settings, dropped) =
-            salvage_fields(&serde_json::from_str(raw).expect("valid json"));
+        let raw =
+            r#"{"max_concurrent_requests":"25","seen_onboarding":true,"accepted_tos_version":3}"#;
+        let (settings, dropped) = salvage_fields(&serde_json::from_str(raw).expect("valid json"));
 
         assert_eq!(dropped, vec!["max_concurrent_requests".to_owned()]);
         assert_eq!(settings.max_concurrent_requests, 25);
@@ -218,8 +218,7 @@ mod tests {
     #[test]
     fn a_sound_file_drops_nothing() {
         let raw = r#"{"seen_onboarding":true,"some_old_field":1}"#;
-        let (settings, dropped) =
-            salvage_fields(&serde_json::from_str(raw).expect("valid json"));
+        let (settings, dropped) = salvage_fields(&serde_json::from_str(raw).expect("valid json"));
 
         assert!(dropped.is_empty());
         assert!(settings.seen_onboarding);

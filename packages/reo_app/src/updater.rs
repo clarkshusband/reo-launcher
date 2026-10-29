@@ -297,7 +297,9 @@ async fn install(
 
         events
             .notify("Update waiting")
-            .body(format!("{reason} Reo Launcher asks again once that is done."))
+            .body(format!(
+                "{reason} Reo Launcher asks again once that is done."
+            ))
             .send();
 
         while install_blocker().is_some() {

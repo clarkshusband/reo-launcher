@@ -1,7 +1,5 @@
 use freya::query::{Query, QueryCapability, UseQuery, use_query};
-use reo_cluster::profiles::{
-    get_profile_or_default, list_named_profiles, resolve_cluster_profile,
-};
+use reo_cluster::profiles::{get_profile_or_default, list_named_profiles, resolve_cluster_profile};
 use reo_core::settings::GameSettingsProfile;
 use reo_db::models::ClusterId;
 

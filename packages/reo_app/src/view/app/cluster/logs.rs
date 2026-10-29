@@ -309,12 +309,15 @@ pub fn viewer_header(
     };
 
     let search_input = {
-        let base = TextInput::new(search).a11y_id(search_id).enabled(has_log).leading(
-            Icon::new(IconType::SearchMd)
-                .size(15.)
-                .color(colors::fg_secondary())
-                .into_element(),
-        );
+        let base = TextInput::new(search)
+            .a11y_id(search_id)
+            .enabled(has_log)
+            .leading(
+                Icon::new(IconType::SearchMd)
+                    .size(15.)
+                    .color(colors::fg_secondary())
+                    .into_element(),
+            );
         if has_log {
             base.placeholder("Search this log...")
         } else {

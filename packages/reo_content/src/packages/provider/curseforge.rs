@@ -97,7 +97,12 @@ impl PackageProvider for CurseForgeProvider {
                 }
             }
             loader_types.truncate(5);
-            append_one_or_many(&mut params, "modLoaderType", "modLoaderTypes", &loader_types);
+            append_one_or_many(
+                &mut params,
+                "modLoaderType",
+                "modLoaderTypes",
+                &loader_types,
+            );
             append_one_or_many(&mut params, "categoryId", "categoryIds", &category_ids);
         }
 
@@ -433,7 +438,9 @@ async fn resolve_category_ids(
 ) -> ContentResult<Vec<u32>> {
     let mut ids: Vec<u32> = Vec::new();
     for category in fetch_categories(content_type, ctx).await? {
-        if names.iter().any(|name| name.eq_ignore_ascii_case(&category.name))
+        if names
+            .iter()
+            .any(|name| name.eq_ignore_ascii_case(&category.name))
             && !ids.contains(&category.id)
         {
             ids.push(category.id);
@@ -1037,7 +1044,10 @@ mod tests {
         let summary = VersionSummary::from(file.clone());
         let detail = VersionDetail::from(file);
 
-        assert_eq!(summary.loaders, vec![GameLoader::Forge, GameLoader::NeoForge]);
+        assert_eq!(
+            summary.loaders,
+            vec![GameLoader::Forge, GameLoader::NeoForge]
+        );
         assert_eq!(detail.loaders, summary.loaders);
         assert_eq!(
             detail.game_versions,

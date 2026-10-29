@@ -6,9 +6,9 @@ use crate::ctx::ContentCtx;
 use crate::error::{ContentError, ContentResult};
 use crate::packages::PackageError;
 use crate::packages::types::{ExternalFile, VersionDetail, VersionFile};
+use polyio::{normalize_hash, sha1_file};
 use reo_common::domain::{ContentType, ProviderId};
 use reo_events::GroupedProgressChild;
-use polyio::{normalize_hash, sha1_file};
 
 #[tracing::instrument(level = "debug", skip(child, ctx))]
 pub async fn ensure_artifact_file(
@@ -32,9 +32,7 @@ pub async fn ensure_artifact_file(
         dest,
         Some(&expected),
         0,
-        child
-            .cloned()
-            .map(reo_net::ResponseNotifyOptions::grouped),
+        child.cloned().map(reo_net::ResponseNotifyOptions::grouped),
     )
     .await?;
 
@@ -73,8 +71,7 @@ pub async fn download_version_file(
     )?;
 
     let refreshed;
-    let (version, file) = if file.url.is_empty() && !reo_net::matches_on_disk(&dest, &hash).await
-    {
+    let (version, file) = if file.url.is_empty() && !reo_net::matches_on_disk(&dest, &hash).await {
         refreshed = refetch_download(provider, project_id, version, file, &hash, ctx).await?;
         dest = cache_file_path(
             content_type,

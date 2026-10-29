@@ -118,14 +118,9 @@ async fn a_mod_removed_in_the_launcher_stays_removed_before_the_first_launch() {
         .await
         .unwrap();
 
-    reo_content::bundles::remove_artifact_from_cluster(
-        cluster.id,
-        &linked[0].hash,
-        false,
-        &ctx,
-    )
-    .await
-    .unwrap();
+    reo_content::bundles::remove_artifact_from_cluster(cluster.id, &linked[0].hash, false, &ctx)
+        .await
+        .unwrap();
 
     assert!(!mods.join("a.jar").exists());
     assert!(!sync_cluster_mods(&state, cluster.id).await);

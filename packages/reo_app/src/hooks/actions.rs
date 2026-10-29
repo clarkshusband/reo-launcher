@@ -432,12 +432,8 @@ impl Actions {
         spawn_forever(async move {
             let Ok(state) = launcher::state() else { return };
             let global = state.settings.read().global_game_settings.clone();
-            match reo_cluster::profiles::create_settings_profile(
-                &state.services.db,
-                &global,
-                &name,
-            )
-            .await
+            match reo_cluster::profiles::create_settings_profile(&state.services.db, &global, &name)
+                .await
             {
                 Ok(_) => super::invalidate_profile_queries().await,
                 Err(err) => tracing::error!("failed to create settings profile: {err:#}"),
@@ -473,9 +469,7 @@ impl Actions {
     pub fn upsert_named_profile(&self, profile: GameSettingsProfile) {
         spawn_forever(async move {
             let Ok(state) = launcher::state() else { return };
-            match reo_cluster::profiles::upsert_named_profile(&state.services.db, &profile)
-                .await
-            {
+            match reo_cluster::profiles::upsert_named_profile(&state.services.db, &profile).await {
                 Ok(_) => super::invalidate_profile_queries().await,
                 Err(err) => tracing::error!("failed to save profile: {err:#}"),
             }
@@ -486,12 +480,8 @@ impl Actions {
         let name = name.into();
         spawn_forever(async move {
             let Ok(state) = launcher::state() else { return };
-            match reo_cluster::profiles::update_named_profile(
-                &state.services.db,
-                &name,
-                update,
-            )
-            .await
+            match reo_cluster::profiles::update_named_profile(&state.services.db, &name, update)
+                .await
             {
                 Ok(_) => super::invalidate_profile_queries().await,
                 Err(err) => tracing::error!("failed to update profile: {err:#}"),
@@ -503,8 +493,7 @@ impl Actions {
         let name = name.into();
         spawn_forever(async move {
             let Ok(state) = launcher::state() else { return };
-            match reo_cluster::profiles::delete_named_profile(&state.services.db, &name).await
-            {
+            match reo_cluster::profiles::delete_named_profile(&state.services.db, &name).await {
                 Ok(()) => super::invalidate_profile_queries().await,
                 Err(err) => tracing::error!("failed to delete profile: {err:#}"),
             }
@@ -593,8 +582,7 @@ impl Actions {
             match off_ui({
                 let state = state.clone();
                 async move {
-                    reo_core::import_migration_game_dir(&state, source, &folder_name, target)
-                        .await
+                    reo_core::import_migration_game_dir(&state, source, &folder_name, target).await
                 }
             })
             .await
@@ -1364,9 +1352,7 @@ impl Actions {
             };
 
             let events = state.services.events.clone();
-            match reo_core::delete_artifact(cluster_id, &hash, &state.services.content())
-                .await
-            {
+            match reo_core::delete_artifact(cluster_id, &hash, &state.services.content()).await {
                 Ok(()) => {
                     events.notify("Removed").body(display_name).send();
 
@@ -1822,9 +1808,7 @@ impl Actions {
                     1,
                     reo_events::TaskCategory::Packages,
                 );
-                match reo_core::apply_browser_package_update(update, Some(&child), &content)
-                    .await
-                {
+                match reo_core::apply_browser_package_update(update, Some(&child), &content).await {
                     Ok(_) => applied += 1,
                     // Not a reason to hold the game back the cache row survives
                     // so the next launch offers it again
@@ -2086,12 +2070,9 @@ impl Actions {
         let actions = self.clone();
         spawn_forever(async move {
             let Ok(state) = launcher::state() else { return };
-            if let Err(err) = reo_core::skip_browser_package_update(
-                cluster_id,
-                &hash,
-                &state.services.content(),
-            )
-            .await
+            if let Err(err) =
+                reo_core::skip_browser_package_update(cluster_id, &hash, &state.services.content())
+                    .await
             {
                 tracing::warn!(error = %err, "failed to record a skipped package update");
             }
