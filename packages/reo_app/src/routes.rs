@@ -17,9 +17,8 @@ use crate::view::{
             ClusterSettings, ClusterShaders, ClusterTextures, ClusterWorlds, ProcessLogs,
         },
         settings::{
-            SettingsAccounts, SettingsAppearance, SettingsChangelog,
-            SettingsDeveloper, SettingsJava, SettingsLanguage, SettingsLauncher, SettingsMinecraft,
-            SettingsStorage,
+            SettingsAccounts, SettingsAppearance, SettingsChangelog, SettingsDeveloper,
+            SettingsJava, SettingsLanguage, SettingsLauncher, SettingsMinecraft, SettingsStorage,
         },
     },
     onboarding::{

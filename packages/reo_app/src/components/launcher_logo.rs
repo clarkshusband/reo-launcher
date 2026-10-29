@@ -23,8 +23,11 @@ impl ReoMark {
 impl Component for ReoMark {
     fn render(&self) -> impl IntoElement {
         let height = self.height_px;
-        let handle: Option<ImageHandle> =
-            use_hook(|| AppAssets::get_bytes("reo-icon.png").as_ref().and_then(decode));
+        let handle: Option<ImageHandle> = use_hook(|| {
+            AppAssets::get_bytes("reo-icon.png")
+                .as_ref()
+                .and_then(decode)
+        });
 
         rect()
             .width(Size::px(height * MARK_ASPECT))

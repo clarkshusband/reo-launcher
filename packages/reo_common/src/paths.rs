@@ -253,9 +253,9 @@ pub fn package_version_dir(
 /// pass through untouched and keep resolving to their existing folders
 fn safe_component(id: &str) -> std::borrow::Cow<'_, str> {
     const RESERVED: &[&str] = &[
-        "CON", "PRN", "AUX", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
-        "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7",
-        "LPT8", "LPT9",
+        "CON", "PRN", "AUX", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+        "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
+        "LPT9",
     ];
 
     let forbidden = |c: char| {
@@ -319,7 +319,13 @@ mod tests {
 
     #[test]
     fn ordinary_package_ids_are_left_alone() {
-        for id in ["AANobbMI", "238222", "4.0.1+mc1.21", "fabric-api_0.92", "imported"] {
+        for id in [
+            "AANobbMI",
+            "238222",
+            "4.0.1+mc1.21",
+            "fabric-api_0.92",
+            "imported",
+        ] {
             assert!(
                 matches!(safe_component(id), std::borrow::Cow::Borrowed(same) if same == id),
                 "{id} should pass through unchanged"

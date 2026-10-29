@@ -370,7 +370,12 @@ mod tests {
             ),
         ];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, Some(ContentType::Mod));
+        let pick = choose_version(
+            candidates,
+            &cluster,
+            GameLoader::Fabric,
+            Some(ContentType::Mod),
+        );
         assert_eq!(pick.unwrap().version_id, "new");
     }
 
@@ -394,7 +399,12 @@ mod tests {
             ),
         ];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, Some(ContentType::Mod));
+        let pick = choose_version(
+            candidates,
+            &cluster,
+            GameLoader::Fabric,
+            Some(ContentType::Mod),
+        );
         assert_eq!(pick.unwrap().version_id, "beta");
     }
 
@@ -440,7 +450,12 @@ mod tests {
             vec!["1.21.4"],
         )];
 
-        let pick = choose_version(candidates, &cluster, GameLoader::Fabric, Some(ContentType::Mod));
+        let pick = choose_version(
+            candidates,
+            &cluster,
+            GameLoader::Fabric,
+            Some(ContentType::Mod),
+        );
         assert_eq!(pick.unwrap().version_id, "pack");
     }
 
@@ -458,8 +473,13 @@ mod tests {
         };
 
         assert!(
-            choose_version(candidates(), &cluster, GameLoader::Fabric, Some(ContentType::Mod))
-                .is_none()
+            choose_version(
+                candidates(),
+                &cluster,
+                GameLoader::Fabric,
+                Some(ContentType::Mod)
+            )
+            .is_none()
         );
         assert!(
             choose_version(candidates(), &cluster, GameLoader::Fabric, None).is_none(),
@@ -493,8 +513,13 @@ mod tests {
             "an untyped version tagged only minecraft is loader agnostic"
         );
         assert!(
-            choose_version(candidates(), &cluster, GameLoader::Fabric, Some(ContentType::Mod))
-                .is_none()
+            choose_version(
+                candidates(),
+                &cluster,
+                GameLoader::Fabric,
+                Some(ContentType::Mod)
+            )
+            .is_none()
         );
     }
 }

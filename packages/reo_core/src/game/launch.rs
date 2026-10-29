@@ -360,9 +360,7 @@ async fn start(
         &libraries,
         &classpaths,
         &version_name,
-        profile
-            .mem_max
-            .unwrap_or_else(reo_common::default_mem_max),
+        profile.mem_max.unwrap_or_else(reo_common::default_mem_max),
         profile.launch_args.clone().unwrap_or_default(),
         &java.os_arch,
         java.major,
@@ -391,7 +389,10 @@ async fn start(
 
     if has_client_mod {
         if let Some(arg) = crate::game::featured_servers_argument(&cwd) {
-            tracing::debug!(cluster_id, "pointing client featured servers at bundled catalog");
+            tracing::debug!(
+                cluster_id,
+                "pointing client featured servers at bundled catalog"
+            );
             jvm_args.push(arg);
         }
     }
@@ -508,9 +509,7 @@ async fn start(
     let recorder = SessionRecorder::start(
         state,
         cluster_id,
-        profile
-            .mem_max
-            .unwrap_or_else(reo_common::default_mem_max),
+        profile.mem_max.unwrap_or_else(reo_common::default_mem_max),
         &java,
     )
     .await;

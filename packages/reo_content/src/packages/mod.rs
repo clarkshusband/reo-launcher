@@ -30,8 +30,8 @@ pub use metadata_cache::{
     CachedPackageMeta, cached_project_detail, fetch_package_meta, get_version_cached,
     read_cached_package_meta,
 };
-pub use reo_common::domain::{ContentType, GameLoader, HashAlgorithm, ProviderId};
 pub use provider::{PackageProvider, PackageProviderRegistry};
+pub use reo_common::domain::{ContentType, GameLoader, HashAlgorithm, ProviderId};
 pub use store::{LiveSync, LocalImportReport, PackageStore};
 pub use types::*;
 pub use updates::{

@@ -6,11 +6,11 @@ use reqwest::Method;
 use tokio::sync::Mutex;
 
 use crate::{LauncherError, LauncherResult};
+use polyio::sha1_bytes;
 use reo_common::paths;
 use reo_net::RequestClient;
 use reo_net::RequestError;
 use reo_net::{EtagPolicy, fetch_cached};
-use polyio::sha1_bytes;
 
 pub const DEFAULT_IMAGE_EDGE: u32 = 1200;
 

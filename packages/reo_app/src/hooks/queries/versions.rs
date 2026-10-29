@@ -200,12 +200,14 @@ impl QueryCapability for VersionLoadersQuery {
     async fn run(&self, keys: &Self::Keys) -> Result<Self::Ok, Self::Err> {
         let state = crate::launcher::state()?;
         let mut metadata = state.metadata.lock().await;
-        Ok(reo_core::get_loaders_for_version(
-            &mut metadata,
-            &state.services.mc(),
-            &keys.mc_version,
+        Ok(
+            reo_core::get_loaders_for_version(
+                &mut metadata,
+                &state.services.mc(),
+                &keys.mc_version,
+            )
+            .await?,
         )
-        .await?)
     }
 }
 
@@ -245,8 +247,7 @@ impl QueryCapability for JavaMajorsQuery {
                 let mut resolved = Vec::with_capacity(wanted.len());
                 for id in &wanted {
                     if let Ok((version, _, _)) =
-                        reo_core::game::resolve_minecraft_version(&mut metadata, &mc, id)
-                            .await
+                        reo_core::game::resolve_minecraft_version(&mut metadata, &mc, id).await
                     {
                         resolved.push((id.clone(), version));
                     }

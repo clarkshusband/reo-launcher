@@ -1331,8 +1331,12 @@ mod tests {
         std::fs::create_dir_all(&shared).unwrap();
         std::fs::write(shared.join("pack.zip"), b"pack").unwrap();
 
-        symlink_dir(&shared, src.join("resourcepacks")).await.unwrap();
-        symlink_dir(&src, src.join("saves").join("loop")).await.unwrap();
+        symlink_dir(&shared, src.join("resourcepacks"))
+            .await
+            .unwrap();
+        symlink_dir(&src, src.join("saves").join("loop"))
+            .await
+            .unwrap();
 
         copy_dir(&src, &dst, &[]).await.unwrap();
 

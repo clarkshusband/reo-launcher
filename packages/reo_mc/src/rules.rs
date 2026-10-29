@@ -82,7 +82,11 @@ mod tests {
             "x86_64",
             true
         ));
-        assert!(validate_rules(&[rule(RuleAction::Allow, None)], "x86_64", true));
+        assert!(validate_rules(
+            &[rule(RuleAction::Allow, None)],
+            "x86_64",
+            true
+        ));
     }
 
     #[test]
@@ -98,7 +102,12 @@ mod tests {
 
     #[test]
     fn an_arm_rule_never_matches_an_x86_64_runtime() {
-        for name in [Os::OsxArm64, Os::WindowsArm64, Os::LinuxArm64, Os::LinuxArm32] {
+        for name in [
+            Os::OsxArm64,
+            Os::WindowsArm64,
+            Os::LinuxArm64,
+            Os::LinuxArm32,
+        ] {
             for updated in [true, false] {
                 let os = OsRule {
                     name: Some(name.clone()),

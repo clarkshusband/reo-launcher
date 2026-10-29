@@ -1,8 +1,8 @@
+use polyio::testing::ScratchDir as Scratch;
+use polyio::{sha1_bytes, sha1_file};
 use reo_core::dev;
 use reo_core::game::download_to_path;
 use reo_events::{GroupedProgressSession, TaskCategory};
-use polyio::testing::ScratchDir as Scratch;
-use polyio::{sha1_bytes, sha1_file};
 
 /// Minecraft asset objects are content-addressed and immutable so this
 /// URL/hash pair stays valid

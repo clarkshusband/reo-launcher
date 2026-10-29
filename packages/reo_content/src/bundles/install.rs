@@ -560,8 +560,7 @@ pub async fn install_enabled_bundle_files(
     // Reported together once everything else has been tried
     let mut failed = Vec::new();
 
-    if taken
-        && let Err(err) = extract_bundle_overrides_for_cluster(archive, cluster_id, ctx).await
+    if taken && let Err(err) = extract_bundle_overrides_for_cluster(archive, cluster_id, ctx).await
     {
         tracing::warn!(bundle = %bundle_name, error = %err, "failed to extract bundle overrides");
         failed.push(format!("{bundle_name} overrides"));

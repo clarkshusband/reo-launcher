@@ -40,12 +40,9 @@ pub async fn apply_bundle_java_override(
         return Ok(());
     }
 
-    let taken = reo_content::bundles::taken_bundle_names(
-        cluster_id,
-        &archives,
-        &state.services.content(),
-    )
-    .await?;
+    let taken =
+        reo_content::bundles::taken_bundle_names(cluster_id, &archives, &state.services.content())
+            .await?;
     let mut overrides = archives
         .iter()
         .filter(|archive| taken.contains(&archive.manifest.name))

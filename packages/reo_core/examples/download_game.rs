@@ -43,10 +43,9 @@ async fn main() -> LauncherResult<()> {
         cluster.name, cluster.mc_version, cluster.mc_loader
     );
 
-    let ready = reo_core::clusters::prepare_cluster_locked(
-        &state, cluster.id, false, true, true, None,
-    )
-    .await?;
+    let ready =
+        reo_core::clusters::prepare_cluster_locked(&state, cluster.id, false, true, true, None)
+            .await?;
     println!("Cluster ready at {}", ready.dir()?.display());
 
     Ok(())

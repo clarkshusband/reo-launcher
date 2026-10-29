@@ -108,9 +108,7 @@ pub async fn import_game_dir(
     target: ImportTarget,
 ) -> LauncherResult<()> {
     match source {
-        MigrationSource::OneClientV1 => {
-            reo_v1::import_game_dir(state, folder_name, target).await
-        }
+        MigrationSource::OneClientV1 => reo_v1::import_game_dir(state, folder_name, target).await,
         MigrationSource::Vanilla => vanilla::import_game_dir(state, target).await,
     }
 }

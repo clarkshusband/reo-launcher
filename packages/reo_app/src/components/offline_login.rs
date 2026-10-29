@@ -59,7 +59,9 @@ pub fn use_offline_login(make_default: bool) -> OfflineLogin {
             return;
         }
         let added = match &*add.read().state() {
-            MutationStateData::Settled { res: Ok(account), .. } => Some(account.id),
+            MutationStateData::Settled {
+                res: Ok(account), ..
+            } => Some(account.id),
             MutationStateData::Settled { res: Err(_), .. } => None,
             _ => return,
         };

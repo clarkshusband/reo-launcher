@@ -23,11 +23,10 @@ impl QueryCapability for PackageUpdatesQuery {
 
     async fn run(&self, _keys: &Self::Keys) -> Result<Self::Ok, Self::Err> {
         let state = crate::launcher::state()?;
-        Ok(reo_core::cached_browser_package_updates(
-            self.cluster_id,
-            &state.services.content(),
+        Ok(
+            reo_core::cached_browser_package_updates(self.cluster_id, &state.services.content())
+                .await?,
         )
-        .await?)
     }
 }
 

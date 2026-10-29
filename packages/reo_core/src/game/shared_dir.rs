@@ -182,8 +182,7 @@ pub async fn materialize_content(
         import_manual_content_with(services, cluster, game_dir, mods_in_cluster, true).await;
 
     if let Err(err) =
-        reo_content::packages::reconcile_duplicate_activity(cluster.id, &services.content())
-            .await
+        reo_content::packages::reconcile_duplicate_activity(cluster.id, &services.content()).await
     {
         // Not worth blocking a launch the duplicates were already there
         tracing::warn!(cluster_id = cluster.id, %err, "failed to resolve duplicate package versions");
@@ -482,7 +481,10 @@ async fn clear_own_pack_folder(dir: &Path) -> bool {
         return true;
     }
 
-    let Some(name) = dir.file_name().map(|name| name.to_string_lossy().into_owned()) else {
+    let Some(name) = dir
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+    else {
         return false;
     };
     for attempt in 1..100 {
@@ -802,10 +804,8 @@ async fn sync_mods_folder(services: &LauncherServices, cluster: &Cluster) -> boo
 
             if !link.enabled {
                 tracing::info!(file = %name, "mod put back by hand; switching it on");
-                match reo_content::bundles::set_artifact_enabled_to(
-                    cluster.id, hash, true, &ctx,
-                )
-                .await
+                match reo_content::bundles::set_artifact_enabled_to(cluster.id, hash, true, &ctx)
+                    .await
                 {
                     Ok(_) => changed = true,
                     Err(err) => {
@@ -1714,9 +1714,7 @@ async fn clear_disabled_mod_files(services: &LauncherServices, cluster: &Cluster
     }
 }
 
-fn disabled_mod_names(
-    linked: &[reo_content::packages::LinkedArtifactInfo],
-) -> HashSet<String> {
+fn disabled_mod_names(linked: &[reo_content::packages::LinkedArtifactInfo]) -> HashSet<String> {
     let mods = || {
         linked
             .iter()
@@ -1973,11 +1971,7 @@ async fn adopt_file(
     Some(imported)
 }
 
-async fn discard_adopted_original(
-    row: &reo_db::models::ArtifactRow,
-    path: &Path,
-    name: &str,
-) {
+async fn discard_adopted_original(row: &reo_db::models::ArtifactRow, path: &Path, name: &str) {
     match artifact_absolute_path(&row.path) {
         Ok(cached) if polyio::try_exists(&cached).await.unwrap_or(false) => {}
         _ => {

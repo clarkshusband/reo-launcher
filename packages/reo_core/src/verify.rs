@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
+use polyio::{normalize_hash, sha1_file};
 use reo_common::paths;
 use reo_content::packages::PackageStore;
 use reo_content::packages::store::artifact_absolute_path;
 use reo_db::dao::artifact as artifact_dao;
 use reo_events::{GroupedProgressSession, TaskCategory, TaskPhase};
-use polyio::{normalize_hash, sha1_file};
 
 use crate::LauncherResult;
 use crate::clusters::prepare::prepare_cluster_locked;

@@ -190,11 +190,7 @@ mod tests {
 
     #[test]
     fn the_url_handler_keeps_the_field_code_outside_the_quoted_path() {
-        let entry = url_handler_entry(
-            &PathBuf::from("/usr/bin/reo_app"),
-            "reolauncher",
-            "reo_app",
-        );
+        let entry = url_handler_entry(&PathBuf::from("/usr/bin/reo_app"), "reolauncher", "reo_app");
         assert!(entry.contains(r#"Exec="/usr/bin/reo_app" %u"#));
         assert!(!entry.contains("%%u"));
     }

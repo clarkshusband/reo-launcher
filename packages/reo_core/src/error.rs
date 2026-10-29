@@ -206,7 +206,8 @@ mod tests {
 
     #[test]
     fn a_missing_asset_directory_asks_for_a_repair() {
-        let path = "/Users/someone/Library/Application Support/drako/ReoLauncher-dev/metadata/assets";
+        let path =
+            "/Users/someone/Library/Application Support/drako/ReoLauncher-dev/metadata/assets";
         let err = not_found(path);
 
         assert!(err.indicates_missing_files(), "{err}");

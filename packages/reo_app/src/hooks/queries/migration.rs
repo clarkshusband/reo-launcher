@@ -1,7 +1,5 @@
 use freya::query::{Query, QueryCapability, UseQuery, use_query};
-use reo_core::{
-    LauncherError, MigrationDetection, detect_migration, resolve_migration_chain,
-};
+use reo_core::{LauncherError, MigrationDetection, detect_migration, resolve_migration_chain};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct MigrationQuery;

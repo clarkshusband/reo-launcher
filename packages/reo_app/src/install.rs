@@ -264,8 +264,7 @@ async fn flagged_install(
         match PackageStore::get_cluster(cluster_id, content).await {
             Ok(cluster) => {
                 let alternatives =
-                    reo_content::packages::resolve_alternatives(entry, &cluster, content)
-                        .await;
+                    reo_content::packages::resolve_alternatives(entry, &cluster, content).await;
                 (cluster.mc_version, alternatives)
             }
             Err(err) => {
@@ -446,10 +445,8 @@ pub async fn install_package(
 
     child.finish();
 
-    let live_deferred = matches!(
-        result,
-        Ok((_, reo_content::packages::LiveSync::Deferred))
-    ) && state.games.is_active(cluster_id);
+    let live_deferred = matches!(result, Ok((_, reo_content::packages::LiveSync::Deferred)))
+        && state.games.is_active(cluster_id);
 
     if let Ok((artifact, _)) = &result {
         mark_new(cluster_id, &artifact.hash, state).await;

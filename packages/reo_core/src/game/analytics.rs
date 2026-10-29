@@ -423,10 +423,7 @@ pub async fn global_analytics(db: &reo_db::DbPool) -> LauncherResult<Analytics> 
 }
 
 #[tracing::instrument(level = "debug", skip(db))]
-pub async fn cluster_analytics(
-    db: &reo_db::DbPool,
-    cluster_id: i64,
-) -> LauncherResult<Analytics> {
+pub async fn cluster_analytics(db: &reo_db::DbPool, cluster_id: i64) -> LauncherResult<Analytics> {
     let spans = session_dao::session_spans_for_cluster(db, cluster_id).await?;
     let servers = session_dao::session_servers_for_cluster(db, cluster_id).await?;
     Ok(Analytics::new(

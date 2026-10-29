@@ -689,8 +689,7 @@ fn reveal_in_store(hash: String) {
         let Ok(state) = crate::launcher::state() else {
             return;
         };
-        let row = match reo_db::dao::artifact::get_artifact_by_hash(&state.services.db, &hash)
-            .await
+        let row = match reo_db::dao::artifact::get_artifact_by_hash(&state.services.db, &hash).await
         {
             Ok(Some(row)) => row,
             Ok(None) => return,

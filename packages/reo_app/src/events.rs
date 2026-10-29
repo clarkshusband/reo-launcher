@@ -413,12 +413,10 @@ pub fn report_startup_failure(station: &RadioStation<AppState, AppChannel>, err:
     } = &mut **guard;
     notifications.dispatch(
         inbox,
-        Event::Notification(reo_events::Notification::Message(
-            reo_events::Message {
-                title: "Launcher failed to start".into(),
-                body: message,
-                level: reo_events::Level::Error,
-            },
-        )),
+        Event::Notification(reo_events::Notification::Message(reo_events::Message {
+            title: "Launcher failed to start".into(),
+            body: message,
+            level: reo_events::Level::Error,
+        })),
     );
 }

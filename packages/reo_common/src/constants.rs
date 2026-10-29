@@ -25,7 +25,8 @@ pub const META_URL_BASE: &str = "https://data-v2.polyfrost.org";
 /// though releases ship from clarkshusband/reo-launcher.
 pub const BUNDLES_URL_BASE: &str = "https://raw.githubusercontent.com/drako1k/reo-launcher/main";
 pub const TOS_URL: &str = "https://github.com/clarkshusband/reo-launcher/blob/main/legal/TERMS.md";
-pub const PRIVACY_URL: &str = "https://github.com/clarkshusband/reo-launcher/blob/main/legal/PRIVACY.md";
+pub const PRIVACY_URL: &str =
+    "https://github.com/clarkshusband/reo-launcher/blob/main/legal/PRIVACY.md";
 pub const PLUS_BACKEND_URL: &str = "https://plus.polyfrost.org";
 
 pub const SENTRY_DSN: &str = match option_env!("REOCLIENT_SENTRY_DSN") {

@@ -73,11 +73,11 @@ impl QueryCapability for WorldDataPacksQuery {
         let state = crate::launcher::state()?;
         let cluster = state.clusters.get(keys.cluster_id).await?;
         let world = keys.world.clone();
-        Ok(tokio::spawn(
-            async move { reo_core::list_world_datapacks(&cluster, &world).await },
+        Ok(
+            tokio::spawn(async move { reo_core::list_world_datapacks(&cluster, &world).await })
+                .await
+                .map_err(std::io::Error::other)??,
         )
-        .await
-        .map_err(std::io::Error::other)??)
     }
 }
 
@@ -192,8 +192,7 @@ pub async fn delete_world_datapack(
     let cluster = state.clusters.get(cluster_id).await?;
     let target = world.clone();
     let result =
-        run_blocking(move || reo_core::delete_world_datapack(&cluster, &target, &file_name))
-            .await;
+        run_blocking(move || reo_core::delete_world_datapack(&cluster, &target, &file_name)).await;
     invalidate_world_contents(cluster_id, world).await;
     result
 }

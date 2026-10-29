@@ -1,6 +1,6 @@
+use polyio::ChecksumAlgorithm;
 use reo_java::vendors::runtime_providers;
 use reo_net::{NetConfig, RequestClient};
-use polyio::ChecksumAlgorithm;
 
 /// A major every vendor still publishes so a listing coming back empty means
 /// the query is wrong rather than the release being retired

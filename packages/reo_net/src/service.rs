@@ -380,7 +380,9 @@ mod tests {
     #[test]
     fn a_keyed_request_is_not_redirected_off_the_api_host() {
         let parsed = |url: &str| -> reqwest::Url { url.parse().unwrap() };
-        let api = [parsed("https://api.curseforge.com/v1/mods/1/files/2/download-url")];
+        let api = [parsed(
+            "https://api.curseforge.com/v1/mods/1/files/2/download-url",
+        )];
 
         assert!(redirect_leaks_curseforge_key(
             &api,
@@ -391,7 +393,9 @@ mod tests {
             &parsed("https://api.curseforge.com/v1/mods/1")
         ));
         assert!(!redirect_leaks_curseforge_key(
-            &[parsed("https://www.curseforge.com/api/v1/mods/1/files/2/download")],
+            &[parsed(
+                "https://www.curseforge.com/api/v1/mods/1/files/2/download"
+            )],
             &parsed("https://edge.forgecdn.net/files/1/2/mod.jar")
         ));
     }

@@ -7,9 +7,7 @@ use reo_common::domain::GameLoader;
 use reo_cluster::Cluster;
 use reo_common::version::parse_mc_version;
 use reo_content::bundles::bundle_override_paths;
-use reo_content::packages::release_migration::{
-    has_migratable_packages, has_packages_to_migrate,
-};
+use reo_content::packages::release_migration::{has_migratable_packages, has_packages_to_migrate};
 
 use crate::LauncherResult;
 use crate::state::LauncherState;

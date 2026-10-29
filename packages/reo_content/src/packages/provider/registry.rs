@@ -148,8 +148,7 @@ async fn enrich_curseforge_fingerprint(
         return Ok(());
     }
 
-    let Some(row) =
-        reo_db::dao::artifact::get_artifact_by_hash(&ctx.db, &identity.sha1).await?
+    let Some(row) = reo_db::dao::artifact::get_artifact_by_hash(&ctx.db, &identity.sha1).await?
     else {
         return Ok(());
     };

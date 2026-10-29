@@ -10,13 +10,13 @@ use strum::IntoEnumIterator;
 use crate::LauncherResult;
 use crate::clusters::ClusterStage;
 use crate::state::LauncherState;
+use polyio::sha1_file;
 use reo_cluster::encode_tags;
 use reo_cluster::profiles::create_profile_from_global;
 use reo_common::domain::{ContentType, GameLoader, ProviderId};
 use reo_common::paths;
 use reo_common::version::parse_mc_version;
 use reo_content::packages::PackageStore;
-use polyio::sha1_file;
 
 const FILE_CONTENT_TYPES: [ContentType; 4] = [
     ContentType::Mod,

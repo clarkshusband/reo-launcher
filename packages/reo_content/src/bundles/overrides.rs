@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::bundles::BundlesManager;
 use crate::ctx::ContentCtx;
 use crate::error::ContentResult;
-use reo_events::EventBus;
 use polyio::{ZipEntryCursor, sha1_bytes, sha1_file};
+use reo_events::EventBus;
 
 const ALWAYS_UPDATE_GLOBS: &[&str] = &["config/fabric_loader_dependencies.json"];
 
