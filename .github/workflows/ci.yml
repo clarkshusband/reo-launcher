@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          # rustfmt never compiles anything, so there is nothing to cache.
+          restore-cache: false
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  # Both steps compile the whole workspace. sqlx needs no setup for that: with
+  # DATABASE_URL unset (packages/reo_db/.env leaves it commented out), its query
+  # macros check against the committed .sqlx/ cache, as in the nightly and
+  # release builds - so a query changed without `cargo sqlx prepare` fails here too.
+  clippy-test:
+    name: clippy + test (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          # A cache saved by a PR run is only visible to that PR, so only main
+          # saves one; PRs restore main's.
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+          # Debug and test builds share no artifacts with the nightly or release
+          # profiles, so they get their own namespace (see setup-rust).
+          cache-namespace: ci-cache
+
+      # Same packages as reo_nightly.yml, minus libfuse2 (only needed to build
+      # the AppImage).
+      - name: (Linux) Install system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config clang python3 \
+            libfontconfig-dev libfreetype-dev \
+            libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libdbus-1-dev \
+            libgtk-3-dev libayatana-appindicator3-dev
+
+      # Warnings are reported but don't fail the job: the workspace has never
+      # been linted in CI. Errors and clippy's deny-by-default lints still do.
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets
+
+      - name: Test
+        run: cargo test --workspace
