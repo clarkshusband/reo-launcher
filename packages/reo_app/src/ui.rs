@@ -259,6 +259,55 @@ pub fn entrance_motion_layer(
         .into_element()
 }
 
+/// Peak blur sigma per pixel a page slides. Skia reads this as sigma, so the visible smear is
+/// about three times wider
+const MOTION_BLUR_PER_PX: f32 = 0.045;
+/// Under this the blur cannot be seen but the backdrop pass still costs a frame's worth of work
+const MIN_VISIBLE_BLUR: f32 = 0.25;
+/// Paints above everything a page draws (nesting adds a layer per level and scroll bars sit 999
+/// higher) while staying under popups, which use overlay layers
+const MOTION_BLUR_LAYER: i16 = 1500;
+
+/// Blur for a page that fades in (opacity `p`) while a cubic ease-out slides it `slide_px`.
+/// Such a slide moves at a speed proportional to (1 - p)^(2/3), and the blur follows speed times
+/// opacity: the veil also softens the still background under the page, so the frames where the
+/// page has not shown up yet stay sharp and the blur lands on the page while it is in motion
+pub fn motion_blur(slide_px: f32, p: f32) -> f32 {
+    let p = p.clamp(0., 1.);
+    // p * (1 - p)^(2/3) peaks at p = 3/5, scaled so that peak is the full blur
+    let peak = 0.6 * 0.4_f32.powf(2. / 3.);
+    slide_px.abs() * MOTION_BLUR_PER_PX * p * (1. - p).powf(2. / 3.) / peak
+}
+
+/// Draws `content` under a veil that blurs it by `blur` without taking pointer events, so the
+/// page stays clickable mid-transition. Both children are keyed: unkeyed siblings pair up by
+/// position, so the veil coming and going would otherwise remount the page under it
+pub fn motion_blurred(blur: f32, content: impl IntoElement) -> impl IntoElement {
+    // The veil goes first: an absolute child is sized from the space its earlier siblings
+    // leave, and the page takes all of it. Its layer still paints it on top
+    rect()
+        .width(Size::fill())
+        .height(Size::fill())
+        .maybe_child((blur > MIN_VISIBLE_BLUR).then(|| {
+            rect()
+                .key("motion-blur-veil")
+                .width(Size::fill())
+                .height(Size::fill())
+                .position(Position::new_absolute().top(0.).left(0.))
+                .layer(Layer::Relative(MOTION_BLUR_LAYER))
+                .interactive(false)
+                .backdrop_blur(blur)
+        }))
+        .child(
+            rect()
+                .key("motion-blur-content")
+                .width(Size::fill())
+                .height(Size::fill())
+                .child(content),
+        )
+        .into_element()
+}
+
 pub trait ImageFallbackExt: Sized {
     fn fallback(self, placeholder: impl IntoElement) -> Self;
 }
@@ -279,4 +328,43 @@ pub fn window_logical_size() -> Size2D {
     }
 
     Size2D::new(size.width / scale, size.height / scale)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn motion_blur_lands_on_the_page_while_it_moves() {
+        assert_eq!(
+            motion_blur(48., 0.),
+            0.,
+            "nothing of the page is on screen yet, only the background"
+        );
+        assert!(motion_blur(48., 0.6) > motion_blur(48., 0.15));
+        assert!(motion_blur(48., 0.6) > motion_blur(48., 0.95));
+        assert_eq!(motion_blur(48., 1.), 0.);
+        assert_eq!(
+            motion_blur(48., 1.2),
+            0.,
+            "an overshooting value must not blur"
+        );
+    }
+
+    #[test]
+    fn motion_blur_peaks_at_the_configured_strength() {
+        let peak = motion_blur(48., 0.6);
+        assert!((peak - 48. * MOTION_BLUR_PER_PX).abs() < 1e-4, "{peak}");
+    }
+
+    #[test]
+    fn motion_blur_scales_with_distance_whichever_way_the_page_moves() {
+        assert_eq!(motion_blur(-44., 0.25), motion_blur(44., 0.25));
+        assert!(motion_blur(48., 0.5) > motion_blur(22., 0.5));
+        assert_eq!(
+            motion_blur(0., 0.5),
+            0.,
+            "a page that stays put stays sharp"
+        );
+    }
 }

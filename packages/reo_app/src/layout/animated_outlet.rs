@@ -5,14 +5,26 @@ use freya::router::*;
 use super::app_shell::{appshell_overlay, back_button, hides_overlay, navigate_back};
 use crate::Route;
 use crate::hooks::use_overlay_claims;
+use crate::motion::use_animations_enabled;
 use crate::theme;
-use crate::ui::entrance_motion_layer;
+use crate::ui::{entrance_motion_layer, motion_blur, motion_blurred};
 
 #[derive(Clone, Copy, PartialEq)]
 enum Enter {
     None,
     Up,
     Fade,
+}
+
+impl Enter {
+    /// How far the page rises into place, which also sets how much it blurs on the way
+    fn slide_px(self) -> f32 {
+        match self {
+            Enter::None => 0.,
+            Enter::Up => 48.,
+            Enter::Fade => 22.,
+        }
+    }
 }
 
 /// This outlet must stay still for these the shell runs its own content-only
@@ -102,6 +114,7 @@ pub struct AnimatedAppOutlet;
 impl Component for AnimatedAppOutlet {
     fn render(&self) -> impl IntoElement {
         let mut router = use_animated_router::<Route>();
+        let animations = use_animations_enabled();
 
         let route = use_route::<Route>();
         let at_home = matches!(&route, Route::Home {});
@@ -213,11 +226,12 @@ impl Component for AnimatedAppOutlet {
         let (content_dy, content_opacity) = if anim_finished || matches!(kind, Enter::None) {
             (0., 1.)
         } else {
-            match kind {
-                Enter::None => (0., 1.),
-                Enter::Up => ((1. - p) * 48., p),
-                Enter::Fade => ((1. - p) * 22., p),
-            }
+            ((1. - p) * kind.slide_px(), p)
+        };
+        let blur = if animations && !anim_finished {
+            motion_blur(kind.slide_px(), p)
+        } else {
+            0.
         };
 
         let overlay = show_overlay.then(|| appshell_overlay(chrome_opacity));
@@ -241,11 +255,14 @@ impl Component for AnimatedAppOutlet {
                     .width(Size::fill())
                     .height(Size::flex(1.0))
                     .overflow(Overflow::Clip)
-                    .child(entrance_motion_layer(
-                        0.,
-                        content_dy,
-                        content_opacity,
-                        Outlet::<Route>::new(),
+                    .child(motion_blurred(
+                        blur,
+                        entrance_motion_layer(
+                            0.,
+                            content_dy,
+                            content_opacity,
+                            Outlet::<Route>::new(),
+                        ),
                     )),
             );
 
