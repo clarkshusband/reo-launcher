@@ -14,9 +14,9 @@ use crate::ctx::ContentCtx;
 use crate::error::ContentResult;
 use crate::packages::file_identity::FileIdentity;
 use crate::packages::types::{
-    DependencyKind, GalleryImage, InstalledPackage, PackageBody, Page, ProjectDetail,
-    ProjectMember, ProjectSummary, ReleaseType, SearchFilters, VersionDependency, VersionDetail,
-    VersionFile, VersionLookup, VersionSummary,
+    CategoryTag, DependencyKind, GalleryImage, GameSide, InstalledPackage, PackageBody, Page,
+    ProjectDetail, ProjectMember, ProjectSummary, ReleaseType, SearchFilters, SideSupport,
+    VersionDependency, VersionDetail, VersionFile, VersionLookup, VersionSummary,
 };
 use reo_common::constants::MODRINTH_API_URL;
 use reo_common::domain::{ContentType, GameLoader, ProviderId};
@@ -26,6 +26,30 @@ pub struct ModrinthProvider;
 
 fn v2(path: &str) -> String {
     format!("{MODRINTH_API_URL}/v2{path}")
+}
+
+/// A side counts when the project needs it or can use it, so client-only mods are left out of a
+/// server filter but optional ones stay
+fn side_facet(side: GameSide) -> Vec<String> {
+    let field = match side {
+        GameSide::Client => "client_side",
+        GameSide::Server => "server_side",
+    };
+    vec![format!("{field}:required"), format!("{field}:optional")]
+}
+
+/// Modrinth mixes loaders into a hit's categories; they get chips of their own, so they are
+/// dropped here. Older hits without `display_categories` fall back to `categories`
+fn display_categories(display: Vec<String>, all: &[String]) -> Vec<String> {
+    let source = if display.is_empty() {
+        all.to_vec()
+    } else {
+        display
+    };
+    source
+        .into_iter()
+        .filter(|c| GameLoader::from_str(c).is_err())
+        .collect()
 }
 
 async fn fetch_json<T: DeserializeOwned>(
@@ -96,6 +120,12 @@ impl PackageProvider for ModrinthProvider {
                     groups.push(vec![format!("categories:{category}")]);
                 }
             }
+            for side in filters.sides.iter().flatten() {
+                groups.push(side_facet(*side));
+            }
+            if filters.open_source {
+                groups.push(vec!["open_source:true".to_string()]);
+            }
             if !groups.is_empty() {
                 params.append_pair(
                     "facets",
@@ -126,9 +156,17 @@ impl PackageProvider for ModrinthProvider {
             description: String,
             #[serde(default)]
             categories: Vec<String>,
+            #[serde(default)]
+            display_categories: Vec<String>,
             #[serde(default, alias = "versions")]
             game_versions: Vec<String>,
             downloads: u64,
+            #[serde(default)]
+            follows: Option<u64>,
+            #[serde(default)]
+            client_side: SideSupport,
+            #[serde(default)]
+            server_side: SideSupport,
             icon_url: Option<String>,
             #[serde(default)]
             featured_gallery: Option<String>,
@@ -168,7 +206,11 @@ impl PackageProvider for ModrinthProvider {
                         .iter()
                         .filter_map(|c| GameLoader::from_str(c).ok())
                         .collect(),
+                    categories: display_categories(h.display_categories, &h.categories),
                     game_versions: h.game_versions,
+                    follows: h.follows,
+                    client_side: h.client_side,
+                    server_side: h.server_side,
                 })
                 .collect(),
         })
@@ -199,22 +241,42 @@ impl PackageProvider for ModrinthProvider {
         &self,
         content_type: ContentType,
         ctx: &ContentCtx,
-    ) -> ContentResult<Vec<String>> {
+    ) -> ContentResult<Vec<CategoryTag>> {
         #[derive(Deserialize)]
         struct Tag {
             name: String,
             project_type: String,
+            #[serde(default)]
+            header: String,
+            #[serde(default)]
+            icon: String,
         }
         let tags: Vec<Tag> = fetch_json(&ctx.net, Method::GET, &v2("/tag/category"), None).await?;
         let want = match content_type {
             ContentType::DataPack => ContentType::Mod.modrinth_type(),
             other => other.modrinth_type(),
         };
-        Ok(tags
+        let mut tags: Vec<CategoryTag> = tags
             .into_iter()
             .filter(|t| t.project_type == want)
-            .map(|t| t.name)
-            .collect())
+            .map(|t| CategoryTag {
+                name: t.name,
+                header: t.header,
+                icon_svg: (!t.icon.trim().is_empty()).then_some(t.icon),
+            })
+            .collect();
+        // Groups keep the order Modrinth sends them in, names inside a group read alphabetically
+        let header_order: Vec<String> = tags.iter().fold(Vec::new(), |mut seen, t| {
+            if !seen.contains(&t.header) {
+                seen.push(t.header.clone());
+            }
+            seen
+        });
+        tags.sort_by(|a, b| {
+            let rank = |t: &CategoryTag| header_order.iter().position(|h| *h == t.header);
+            rank(a).cmp(&rank(b)).then_with(|| a.name.cmp(&b.name))
+        });
+        Ok(tags)
     }
 
     #[tracing::instrument(level = "debug", skip(self, project_ids, ctx))]
@@ -811,6 +873,41 @@ fn parse_release_type(s: &str) -> ReleaseType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_side_filter_keeps_projects_that_need_or_can_use_that_side() {
+        assert_eq!(
+            side_facet(GameSide::Server),
+            ["server_side:required", "server_side:optional"]
+        );
+        assert_eq!(
+            side_facet(GameSide::Client),
+            ["client_side:required", "client_side:optional"]
+        );
+    }
+
+    #[test]
+    fn display_categories_leave_loaders_to_their_own_chips() {
+        let all = ["fabric".to_string(), "library".to_string()];
+        assert_eq!(
+            display_categories(
+                vec!["fabric".into(), "library".into(), "quilt".into()],
+                &all
+            ),
+            ["library"]
+        );
+        assert_eq!(display_categories(Vec::new(), &all), ["library"]);
+    }
+
+    /// The fields a browse row shows come from the search hit, so a rename here blanks them
+    #[test]
+    fn search_hit_side_support_parses_and_unknown_values_fall_back() {
+        let parse = |s: &str| serde_json::from_value::<SideSupport>(serde_json::json!(s)).unwrap();
+        assert_eq!(parse("required"), SideSupport::Required);
+        assert_eq!(parse("optional"), SideSupport::Optional);
+        assert_eq!(parse("unsupported"), SideSupport::Unsupported);
+        assert_eq!(parse("something-new"), SideSupport::Unknown);
+    }
 
     /// A field rename here silently empties the dependency list
     #[test]
