@@ -7,9 +7,10 @@ use crate::components::{Button, Icon, IconType, TabBar, TabItem};
 use crate::hooks::{
     use_cluster, use_dispatch, use_game_snapshot, use_launcher, use_version_metadata,
 };
+use crate::motion::use_animations_enabled;
 use crate::routes::Route;
 use crate::theme::colors;
-use crate::ui::entrance_motion_layer;
+use crate::ui::{entrance_motion_layer, motion_blur, motion_blurred};
 use crate::view::app::{launch_button_state, launch_syncing, use_shared_dir_taken};
 
 const HEADER_HEIGHT: f32 = 64.;
@@ -223,6 +224,7 @@ struct ClusterContentOutlet;
 impl Component for ClusterContentOutlet {
     fn render(&self) -> impl IntoElement {
         let mut router = use_animated_router::<Route>();
+        let animations = use_animations_enabled();
 
         let anim = use_animation(|_conf| {
             AnimNum::new(0., 1.)
@@ -268,8 +270,16 @@ impl Component for ClusterContentOutlet {
             dir * (1.0 - p) * CONTENT_DX
         };
         let opacity = if anim_finished || dir == 0. { 1. } else { p };
+        let blur = if animations && !anim_finished {
+            motion_blur(dir * CONTENT_DX, p)
+        } else {
+            0.
+        };
 
-        entrance_motion_layer(slide_x, 0., opacity, Outlet::<Route>::new())
+        motion_blurred(
+            blur,
+            entrance_motion_layer(slide_x, 0., opacity, Outlet::<Route>::new()),
+        )
     }
 }
 

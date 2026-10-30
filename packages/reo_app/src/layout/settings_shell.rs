@@ -15,11 +15,15 @@ use crate::components::{
     Icon, IconType, ScrollArea, ScrollAreaCtx, TextInput, TooltipPlacement, use_tooltip_anchor,
 };
 use crate::hooks::{latest_changelog_version, use_changelog, use_settings_snapshot};
+use crate::motion::use_animations_enabled;
 use crate::routes::Route;
 use crate::theme::colors;
+use crate::ui::{motion_blur, motion_blurred};
 use crate::use_dispatch;
 
 const SIDEBAR_WIDTH_PX: f32 = 225.;
+/// How far a settings page slides in from the left when its tab is picked
+const PAGE_SHIFT_PX: f32 = 46.;
 const ITEM_HEIGHT_PX: f32 = 33.;
 const SEARCH_WIDTH_PX: f32 = 256.;
 const SEARCH_MIN_WIDTH_PX: f32 = 120.;
@@ -363,6 +367,7 @@ impl Component for SettingsShell {
     fn render(&self) -> impl IntoElement {
         let route = use_route::<Route>();
         let active = route_tab(&route);
+        let animations = use_animations_enabled();
 
         let changelog_unread = has_unread_changelog();
 
@@ -385,13 +390,18 @@ impl Component for SettingsShell {
             anim.run(AnimDirection::Forward);
         }
         let p = anim.get().value();
+        // Search results swap in without sliding, so only a page in motion blurs
+        let blur = if animations && query.is_empty() && *anim.is_running().read() {
+            motion_blur(PAGE_SHIFT_PX, p)
+        } else {
+            0.
+        };
 
         let children: Vec<Element> = if query.is_empty() {
-            const SHIFT_PX: f32 = 46.;
             vec![
                 rect()
                     .width(Size::fill())
-                    .offset_x(-(1.0 - p) * SHIFT_PX)
+                    .offset_x(-(1.0 - p) * PAGE_SHIFT_PX)
                     .opacity(p)
                     .child(Outlet::<Route>::new())
                     .into_element(),
@@ -420,10 +430,13 @@ impl Component for SettingsShell {
                         search,
                         header_width,
                     ))
-                    .child(
+                    // Wraps the scroll area rather than the page inside it, so the blur covers
+                    // what is on screen however far the page is scrolled
+                    .child(motion_blurred(
+                        blur,
                         ScrollArea::new()
                             .width(Size::fill())
-                            .height(Size::flex(1.0))
+                            .height(Size::fill())
                             .show_scrollbar(true)
                             .scrollbar_gutter(true)
                             .spacing(4.)
@@ -432,7 +445,7 @@ impl Component for SettingsShell {
                                 SETTINGS_SCROLL_CTX.with(|cell| *cell.borrow_mut() = Some(ctx));
                             })
                             .children(children),
-                    ),
+                    )),
             )
     }
 }
