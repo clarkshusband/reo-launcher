@@ -69,6 +69,22 @@ const SEARCH_INDEX: &[SearchItem] = &[
         route: Route::SettingsLauncher {},
     },
     SearchItem {
+        id: "launcher.discord_game_details",
+        icon: IconType::Play,
+        title: "Discord: Game Details",
+        description: "Show the instance, Minecraft version, loader and mod count while you play.",
+        keywords: &["discord", "rich presence", "privacy", "instance", "mods"],
+        route: Route::SettingsLauncher {},
+    },
+    SearchItem {
+        id: "launcher.discord_launcher_activity",
+        icon: IconType::Eye,
+        title: "Discord: Launcher Activity",
+        description: "Show what you are doing in the launcher, like browsing mods, while no game runs.",
+        keywords: &["discord", "rich presence", "privacy", "status", "browsing"],
+        route: Route::SettingsLauncher {},
+    },
+    SearchItem {
         id: "launcher.folder",
         icon: IconType::Folder,
         title: "Launcher Folder",

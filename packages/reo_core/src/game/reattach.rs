@@ -16,7 +16,6 @@ use crate::game::process::{is_process_alive, kill_process, process_start_time};
 use crate::game::session::SessionRecorder;
 use crate::game::tail::spawn_log_tail;
 use crate::state::LauncherState;
-use reo_discord::Presence;
 use reo_events::LaunchStage;
 
 /// Only a fallback for a process we don't own so a slow poll is plenty
@@ -211,10 +210,9 @@ async fn readopt(
         .services
         .events
         .game_stage(cluster_id, LaunchStage::Running);
-    state.discord.set_presence(Presence::Playing {
-        cluster: cluster.name.clone(),
-        mc_version: cluster.mc_version.clone(),
-    });
+    state
+        .discord
+        .set_game(Some(crate::game::presence::discord_session(&cluster)));
 
     let Some(log_path) = log_path else {
         return;

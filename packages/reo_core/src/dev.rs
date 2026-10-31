@@ -272,7 +272,7 @@ pub async fn ephemeral_state() -> LauncherResult<Arc<LauncherState>> {
         versions: Arc::new(crate::versions::VersionsManager::new()),
         images: crate::images::ImageCacheStore::new(),
         games: crate::game::GameProcessManager::new(),
-        discord: reo_discord::DiscordRpc::spawn(false),
+        discord: reo_discord::DiscordRpc::spawn(false, reo_discord::PresenceOptions::default()),
     }))
 }
 
