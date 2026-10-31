@@ -2,9 +2,7 @@
 
 # Reo Launcher
 
-Reo Launcher is a Minecraft: Java Edition launcher with packaged, pre-configured mods in one click.
-
-It is a rebranded fork of [Polyfrost's OneLauncher](https://github.com/Polyfrost/OneLauncher), maintained by drako. All credit for the original work goes to Polyfrost and its contributors.
+A Minecraft: Java Edition launcher with packaged, pre-configured mods in one click.
 
 </div>
 
@@ -44,9 +42,8 @@ cargo build -p reo_app --release
 
 ### Packaging / Releasing
 
-Installers are produced with [**cargo-packager**](https://github.com/crabnebula-dev/cargo-packager)
-(the standalone bundler spun out of the Tauri bundler). Config lives in
-[`packages/reo_app/Cargo.toml`](./packages/reo_app/Cargo.toml) under
+Installers are produced with [**cargo-packager**](https://github.com/crabnebula-dev/cargo-packager).
+Config lives in [`packages/reo_app/Cargo.toml`](./packages/reo_app/Cargo.toml) under
 `[package.metadata.packager]`.
 
 ```sh
@@ -69,6 +66,6 @@ Add one per user-facing change with `knope document-change` (installed via `carg
 and uses the new entry as the GitHub release body, which is what the launcher's changelog page shows.
 
 
-## Code signing
+## Acknowledgements
 
-This program uses free code signing provided by [SignPath.io](https://signpath.io?utm_source=foundation&utm_medium=github&utm_campaign=0install), and a certificate by the [SignPath Foundation](https://signpath.org?utm_source=foundation&utm_medium=github&utm_campaign=0install) for upstream OneLauncher builds. We thank them very much to their contributions to OSS software!
+Reo Launcher includes code from [OneLauncher](https://github.com/Polyfrost/OneLauncher) by Polyfrost and its contributors, used under its original license (see [LICENSE](./LICENSE)).
