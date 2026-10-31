@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use freya::prelude::*;
 use reo_common::domain::GameLoader;
 use reo_content::packages::ProviderId;
-use reo_content::packages::types::SearchSort;
+use reo_content::packages::types::{GameSide, SearchSort};
 use reo_db::models::ClusterId;
 
 use crate::hooks::ClusterAction;
@@ -125,7 +125,13 @@ pub struct BrowserUiState {
     pub provider: ProviderId,
     pub categories: Vec<String>,
     pub sort: SearchSort,
-    pub loader: Option<GameLoader>,
+    pub loaders: Vec<GameLoader>,
+    pub game_versions: Vec<String>,
+    /// Lists snapshots and old betas next to releases in the version filter
+    pub all_versions: bool,
+    pub sides: Vec<GameSide>,
+    pub open_source: bool,
+    pub page_size: usize,
     pub page: usize,
 }
 
@@ -136,7 +142,12 @@ impl Default for BrowserUiState {
             provider: ProviderId::Modrinth,
             categories: Vec::new(),
             sort: SearchSort::Relevance,
-            loader: None,
+            loaders: Vec::new(),
+            game_versions: Vec::new(),
+            all_versions: false,
+            sides: Vec::new(),
+            open_source: false,
+            page_size: crate::hooks::BROWSE_PAGE_SIZE,
             page: 0,
         }
     }

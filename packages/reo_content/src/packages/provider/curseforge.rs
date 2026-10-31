@@ -12,9 +12,9 @@ use crate::error::ContentResult;
 use crate::packages::dependencies::base_game_version;
 use crate::packages::file_identity::FileIdentity;
 use crate::packages::types::{
-    DependencyKind, GalleryImage, InstalledPackage, PackageBody, Page, ProjectDetail,
-    ProjectMember, ProjectSummary, ReleaseType, SearchFilters, VersionDependency, VersionDetail,
-    VersionFile, VersionLookup, VersionSummary,
+    CategoryTag, DependencyKind, GalleryImage, InstalledPackage, PackageBody, Page, ProjectDetail,
+    ProjectMember, ProjectSummary, ReleaseType, SearchFilters, SideSupport, VersionDependency,
+    VersionDetail, VersionFile, VersionLookup, VersionSummary,
 };
 use reo_common::constants::{CURSEFORGE_API_URL, CURSEFORGE_GAME_ID};
 use reo_common::domain::{ContentType, GameLoader, ProviderId};
@@ -220,11 +220,15 @@ impl PackageProvider for CurseForgeProvider {
         &self,
         content_type: ContentType,
         ctx: &ContentCtx,
-    ) -> ContentResult<Vec<String>> {
+    ) -> ContentResult<Vec<CategoryTag>> {
         Ok(fetch_categories(content_type, ctx)
             .await?
             .into_iter()
-            .map(|c| c.name)
+            .map(|c| CategoryTag {
+                name: c.name,
+                header: "categories".to_string(),
+                icon_svg: None,
+            })
             .collect())
     }
 
@@ -583,6 +587,8 @@ struct CfMod {
     links: Option<CfLinks>,
     #[serde(default)]
     screenshots: Vec<CfScreenshot>,
+    #[serde(default)]
+    categories: Vec<CfCategory>,
     class_id: u32,
 }
 
@@ -745,6 +751,11 @@ impl From<CfMod> for ProjectSummary {
             updated: m.date_modified,
             loaders: Vec::new(),
             game_versions: Vec::new(),
+            // CurseForge counts thumbs up rather than followers and has no client/server split
+            follows: None,
+            categories: m.categories.into_iter().map(|c| c.name).collect(),
+            client_side: SideSupport::Unknown,
+            server_side: SideSupport::Unknown,
         }
     }
 }

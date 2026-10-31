@@ -4,13 +4,16 @@ use freya::query::{Query, QueryCapability, UseQuery, use_query};
 use reo_common::domain::GameLoader;
 use reo_common::search::normalize_query;
 use reo_content::packages::types::{
-    DEFAULT_PAGE_SIZE, Page, ProjectDetail, ProjectSummary, SearchFilters, SearchSort,
-    VersionSummary,
+    CategoryTag, DEFAULT_PAGE_SIZE, GameSide, Page, ProjectDetail, ProjectSummary, SearchFilters,
+    SearchSort, VersionSummary,
 };
 use reo_content::packages::{CachedPackageMeta, ContentType, ProviderId};
 use reo_core::LauncherError;
 
 pub const BROWSE_PAGE_SIZE: usize = DEFAULT_PAGE_SIZE;
+/// Multiples of 12 so the grid's 2, 3 and 4 columns always end on a full row. CurseForge caps a
+/// page at 50
+pub const BROWSE_PAGE_SIZES: [usize; 3] = [12, 24, 48];
 pub const VERSIONS_PAGE_SIZE: usize = 20;
 pub const ALL_VERSIONS: usize = usize::MAX;
 
@@ -37,8 +40,11 @@ pub struct PackageSearchKeys {
     pub game_versions: Vec<String>,
     pub loaders: Vec<GameLoader>,
     pub categories: Vec<String>,
+    pub sides: Vec<GameSide>,
+    pub open_source: bool,
     pub sort: SearchSort,
     pub page: usize,
+    pub page_size: usize,
 }
 
 impl QueryCapability for PackageSearchQuery {
@@ -59,9 +65,11 @@ impl QueryCapability for PackageSearchQuery {
                         .then(|| keys.game_versions.clone()),
                     loaders: (!keys.loaders.is_empty()).then(|| keys.loaders.clone()),
                     categories: (!keys.categories.is_empty()).then(|| keys.categories.clone()),
+                    sides: (!keys.sides.is_empty()).then(|| keys.sides.clone()),
+                    open_source: keys.open_source,
                     sort: Some(keys.sort),
-                    offset: Some(keys.page * BROWSE_PAGE_SIZE),
-                    limit: Some(BROWSE_PAGE_SIZE),
+                    offset: Some(keys.page * keys.page_size),
+                    limit: Some(keys.page_size),
                 },
                 &state.services.content(),
             )
@@ -69,29 +77,13 @@ impl QueryCapability for PackageSearchQuery {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn use_package_search(
-    provider: ProviderId,
-    content_type: ContentType,
-    query: String,
-    game_versions: Vec<String>,
-    loaders: Vec<GameLoader>,
-    categories: Vec<String>,
-    sort: SearchSort,
-    page: usize,
-) -> UseQuery<PackageSearchQuery> {
+pub fn use_package_search(keys: PackageSearchKeys) -> UseQuery<PackageSearchQuery> {
     use_query(Query::new(
         PackageSearchKeys {
-            provider,
-            content_type,
             // The key is also the cache key without normalizing "sodium" and
             // "sodium " are two entries and a trailing space refetches for nothing
-            query: normalize_query(&query),
-            game_versions,
-            loaders,
-            categories,
-            sort,
-            page,
+            query: normalize_query(&keys.query),
+            ..keys
         },
         PackageSearchQuery,
     ))
@@ -283,7 +275,7 @@ pub struct PackageCategoriesKeys {
 }
 
 impl QueryCapability for PackageCategoriesQuery {
-    type Ok = Vec<String>;
+    type Ok = Vec<CategoryTag>;
     type Err = LauncherError;
     type Keys = PackageCategoriesKeys;
 
@@ -310,6 +302,6 @@ pub fn use_package_categories(
     ))
 }
 
-pub fn category_list(query: &UseQuery<PackageCategoriesQuery>) -> Vec<String> {
+pub fn category_list(query: &UseQuery<PackageCategoriesQuery>) -> Vec<CategoryTag> {
     super::state::settled_or_loading(query).unwrap_or_default()
 }
