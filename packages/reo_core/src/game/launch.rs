@@ -19,7 +19,6 @@ use crate::settings::GameSettingsProfile;
 use crate::state::LauncherState;
 use reo_auth::MinecraftAccount;
 use reo_common::paths;
-use reo_discord::Presence;
 use reo_events::{GroupedProgressSession, LaunchStage};
 use reo_mc::{
     self as arguments, download_minecraft, download_version_info, game_files_missing,
@@ -501,10 +500,9 @@ async fn start(
 
     stage(LaunchStage::Running);
     state.games.set_pid(cluster_id, pid);
-    state.discord.set_presence(Presence::Playing {
-        cluster: cluster.name.clone(),
-        mc_version: cluster.mc_version.clone(),
-    });
+    state
+        .discord
+        .set_game(Some(crate::game::presence::discord_session(&cluster)));
 
     let recorder = SessionRecorder::start(
         state,
@@ -711,7 +709,7 @@ pub(crate) async fn finalize_session(
             .game_stage(cluster_id, LaunchStage::Exited);
 
         if state.games.running_ids().is_empty() {
-            state.discord.set_presence(Presence::Idle);
+            state.discord.set_game(None);
         }
     }
 

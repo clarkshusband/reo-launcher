@@ -15,16 +15,48 @@ use crate::components::{
 };
 use crate::layout::AnimatedAppOutlet;
 use crate::use_settings_snapshot;
+use reo_core::LauncherActivity;
 use reo_core::clusters::Cluster;
 use reo_core::images::BACKGROUND_IMAGE_EDGE;
 use reo_db::models::ClusterId;
 
 use crate::hooks::{
     ActiveClusterState, BROWSER_COMPAT_DEFAULT, BrowserCompatState, BrowserStateStore,
-    BrowserTypeState, DataPackWorldState, use_active_cluster_id, use_clusters, use_game_snapshot,
-    use_launcher, use_provide_active_cluster, use_provide_browser_compat,
-    use_provide_browser_state, use_provide_browser_type, use_provide_datapack_world, use_splash,
+    BrowserTypeState, DataPackWorldState, content_type_for_slug, use_active_cluster_id,
+    use_clusters, use_game_snapshot, use_launcher, use_provide_active_cluster,
+    use_provide_browser_compat, use_provide_browser_state, use_provide_browser_type,
+    use_provide_datapack_world, use_splash,
 };
+
+/// What Discord shows for the page the launcher is on. A running game outranks it
+fn discord_activity(route: &Route) -> LauncherActivity {
+    match route {
+        Route::Browser { package_type, .. } | Route::BrowserPackage { package_type, .. } => {
+            LauncherActivity::Browsing(content_type_for_slug(package_type))
+        }
+        Route::Clusters {}
+        | Route::ClusterOverview { .. }
+        | Route::ClusterLogs { .. }
+        | Route::ProcessLogs { .. }
+        | Route::ClusterScreenshots { .. }
+        | Route::ClusterMods { .. }
+        | Route::ClusterShaders { .. }
+        | Route::ClusterTextures { .. }
+        | Route::ClusterWorlds { .. }
+        | Route::ClusterDataPacks { .. }
+        | Route::ClusterSettings { .. } => LauncherActivity::Instances,
+        Route::SettingsAppearance {}
+        | Route::SettingsMinecraft {}
+        | Route::SettingsAccounts {}
+        | Route::SettingsLauncher {}
+        | Route::SettingsJava {}
+        | Route::SettingsStorage {}
+        | Route::SettingsLanguage {}
+        | Route::SettingsDeveloper {}
+        | Route::SettingsChangelog {} => LauncherActivity::Settings,
+        _ => LauncherActivity::Home,
+    }
+}
 use crate::theme::colors;
 use crate::utils::home_cluster;
 use reo_events::LaunchStage;
@@ -36,6 +68,13 @@ pub struct AppShell;
 
 impl Component for AppShell {
     fn render(&self) -> impl IntoElement {
+        let activity = discord_activity(&use_route::<Route>());
+        use_side_effect_with_deps(&activity, move |activity| {
+            if let Ok(state) = crate::launcher::state() {
+                state.discord.set_activity(*activity);
+            }
+        });
+
         let active_cluster = use_state(|| None::<ClusterId>);
         use_provide_active_cluster(ActiveClusterState(active_cluster));
 
@@ -583,4 +622,38 @@ pub(crate) fn back_button(destination: &str) -> impl IntoElement {
         .margin(Gaps::new(0., 0., 0., 32.))
         .child(Icon::new(IconType::ArrowLeft).size(12.))
         .text(format!("Back to {destination}"))
+}
+
+#[cfg(test)]
+mod discord_activity_tests {
+    use reo_common::domain::ContentType;
+
+    use super::*;
+
+    #[test]
+    fn pages_map_to_what_discord_should_say() {
+        let browse = |package_type: &str| Route::Browser {
+            cluster_id: 1,
+            package_type: package_type.to_string(),
+            pick_cluster: false,
+        };
+        assert_eq!(
+            discord_activity(&browse("mod")),
+            LauncherActivity::Browsing(ContentType::Mod)
+        );
+        assert_eq!(
+            discord_activity(&browse("texture")),
+            LauncherActivity::Browsing(ContentType::ResourcePack)
+        );
+        assert_eq!(
+            discord_activity(&Route::ClusterMods { cluster_id: 1 }),
+            LauncherActivity::Instances
+        );
+        assert_eq!(
+            discord_activity(&Route::SettingsLauncher {}),
+            LauncherActivity::Settings
+        );
+        assert_eq!(discord_activity(&Route::Home {}), LauncherActivity::Home);
+        assert_eq!(discord_activity(&Route::Stats {}), LauncherActivity::Home);
+    }
 }

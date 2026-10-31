@@ -71,7 +71,7 @@ pub use reo_content::packages::updates::{
     skip_browser_package_update,
 };
 pub use reo_db::models::SeenStatus;
-pub use reo_discord::{DiscordRpc, Presence};
+pub use reo_discord::{DiscordRpc, GameSession, LauncherActivity, PresenceOptions};
 pub use reo_mc::{McError as MetadataError, MetadataStore};
 pub use settings::ProfileUpdate;
 pub use state::LauncherServices;

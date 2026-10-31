@@ -218,7 +218,9 @@ impl Actions {
             let loaded =
                 reo_core::settings::store::load_settings(Some(&state.services.events)).await;
             let discord_enabled = loaded.discord_enabled;
+            let discord_presence = loaded.discord_presence();
             *state.settings.write() = loaded.clone();
+            state.discord.set_options(discord_presence);
             state.discord.set_enabled(discord_enabled);
 
             let mut guard = station.clone().write_channel(AppChannel::Settings);
@@ -284,6 +286,7 @@ impl Actions {
             return;
         };
         if let Ok(state) = launcher::state() {
+            state.discord.set_options(updated.discord_presence());
             state.discord.set_enabled(updated.discord_enabled);
         }
         self.persist(updated);
@@ -298,6 +301,7 @@ impl Actions {
             return;
         };
         if let Ok(state) = launcher::state() {
+            state.discord.set_options(updated.discord_presence());
             state.discord.set_enabled(updated.discord_enabled);
         }
         self.persist(updated);

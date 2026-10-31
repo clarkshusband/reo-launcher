@@ -32,6 +32,16 @@ impl Component for SettingsLauncher {
             move || v
         });
 
+        let discord_details = use_state({
+            let v = settings.discord_show_game_details;
+            move || v
+        });
+
+        let discord_activity = use_state({
+            let v = settings.discord_show_launcher_activity;
+            move || v
+        });
+
         let crash_reporting = use_state({
             let v = settings.crash_reporting;
             move || v
@@ -60,6 +70,8 @@ impl Component for SettingsLauncher {
         let mut first = use_state(|| true);
         use_side_effect(move || {
             let discord = *discord_rpc.read();
+            let details = *discord_details.read();
+            let activity = *discord_activity.read();
             let crash = *crash_reporting.read();
             let maximized = *start_maximized.read();
             let background = *run_in_background.read();
@@ -71,6 +83,8 @@ impl Component for SettingsLauncher {
             }
             dispatch.edit_settings(|next| {
                 next.discord_enabled = discord;
+                next.discord_show_game_details = details;
+                next.discord_show_launcher_activity = activity;
                 next.crash_reporting = crash;
                 next.start_maximized = maximized;
                 next.run_in_background = background;
@@ -100,6 +114,26 @@ impl Component for SettingsLauncher {
                 "Discord RPC",
                 "Enable Discord Rich Presence.",
                 resettable(toggle(discord_rpc), discord_rpc, defaults.discord_enabled),
+            ))
+            .child(settings_row(
+                IconType::Play,
+                "Discord: Game Details",
+                "Show the instance, Minecraft version, loader and mod count while you play.",
+                resettable(
+                    toggle(discord_details),
+                    discord_details,
+                    defaults.discord_show_game_details,
+                ),
+            ))
+            .child(settings_row(
+                IconType::Eye,
+                "Discord: Launcher Activity",
+                "Show what you are doing in the launcher, like browsing mods, while no game runs.",
+                resettable(
+                    toggle(discord_activity),
+                    discord_activity,
+                    defaults.discord_show_launcher_activity,
+                ),
             ))
             .child(settings_row(
                 IconType::AlertTriangle,
