@@ -151,7 +151,7 @@ impl Component for SettingsLauncher {
             .child(settings_row(
                 IconType::LayoutTop,
                 "Show Tray Icon",
-                "Show Reo Launcher in the system tray or menu bar. Applies on restart.",
+                "Show Reo Launcher in the system tray. Applies on restart.",
                 resettable(
                     toggle(show_tray_icon),
                     show_tray_icon,

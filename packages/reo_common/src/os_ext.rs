@@ -10,7 +10,6 @@ impl OsExt for Os {
     fn native() -> Self {
         match std::env::consts::OS {
             "windows" => Self::Windows,
-            "macos" => Self::Osx,
             "linux" => Self::Linux,
             _ => Self::Unknown,
         }
@@ -30,12 +29,6 @@ impl OsExt for Os {
                 Self::LinuxArm32
             } else {
                 Self::Linux
-            }
-        } else if std::env::consts::OS == "macos" {
-            if java_arch == "aarch64" {
-                Self::OsxArm64
-            } else {
-                Self::Osx
             }
         } else {
             Self::Unknown

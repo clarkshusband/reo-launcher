@@ -49,13 +49,8 @@ pub fn old_root() -> Option<PathBuf> {
         {
             d.data_dir().join(".minecraft")
         }
-        // macOS `~/Library/Application Support/minecraft` no leading dot
-        #[cfg(target_os = "macos")]
-        {
-            d.data_dir().join("minecraft")
-        }
         // Linux `~/.minecraft` not data_dir() (`~/.local/share`)
-        #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+        #[cfg(not(target_os = "windows"))]
         {
             d.home_dir().join(".minecraft")
         }

@@ -13,12 +13,7 @@ pub fn resolve_java_executable(selection: impl AsRef<Path>) -> JavaResult<PathBu
     }
 
     let relative = java_executable_relative_path();
-    let candidates = [
-        selection.join(&relative),
-        selection.join(JAVA_BIN),
-        #[cfg(target_os = "macos")]
-        selection.join("Contents").join("Home").join(&relative),
-    ];
+    let candidates = [selection.join(&relative), selection.join(JAVA_BIN)];
 
     for candidate in candidates {
         if candidate.is_file() {

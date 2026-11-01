@@ -147,11 +147,9 @@ const ADOPTIUM_ARCH: &str = match HostTarget::CURRENT.arch {
     HostArch::Aarch64 => "aarch64",
 };
 
-/// Adoptium says `mac` where the other vendors say `macos` and publishes musl
-/// builds under `alpine-linux` rather than `linux-musl`
+/// Adoptium publishes musl builds under `alpine-linux` rather than `linux-musl`
 const ADOPTIUM_OS: &str = match HostTarget::CURRENT.os {
     HostOs::Windows => "windows",
-    HostOs::MacOs => "mac",
     HostOs::Linux { musl: true } => "alpine-linux",
     HostOs::Linux { musl: false } => "linux",
 };

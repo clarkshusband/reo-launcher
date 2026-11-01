@@ -97,7 +97,6 @@ const ZULU_ARCH: &str = match HostTarget::CURRENT.arch {
 
 const ZULU_OS: &str = match HostTarget::CURRENT.os {
     HostOs::Windows => "windows",
-    HostOs::MacOs => "macos",
     HostOs::Linux { musl: true } => "linux-musl",
     HostOs::Linux { musl: false } => "linux",
 };

@@ -62,7 +62,7 @@ Installers are built with [cargo-packager] (config in
 
 - `cargo install cargo-packager --locked`
 - `cargo build --release -p reo_app`
-- `cargo packager --release -p reo_app --formats <nsis|app,dmg|deb,appimage>`
+- `cargo packager --release -p reo_app --formats <nsis|deb,appimage>`
 
 Releases are cut by dispatching the `OneClient Release Build` GitHub Actions
 workflow. See the **Packaging / Releasing** section of the [README] for details
@@ -93,14 +93,6 @@ Once you have finished making your changes, create a pull request (PR) to submit
 
 Congratulations! 🎉🎉 Polyfrost thanks you for your contribution! ✨
 Once your PR is merged, your changes will be included in the next release.
-
-### Common Errors
-
-#### macOS errors with Xcode command line tools
-
-Build errors can occur when the Xcode command line tools are not installed or not in your `PATH`.
-
-Run `xcode-select --install` in the terminal to install them. If they are already installed, ensure that macOS is updated to the latest version available.
 
 ### Credits
 

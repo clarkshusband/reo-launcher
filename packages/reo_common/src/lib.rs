@@ -1,6 +1,10 @@
 //! Leaf crate must never depend on the database network stack or any
 //! launcher subsystem or the dependency graph cycles back into a monolith
 
+// Every crate in the workspace builds on this one, so a Mac build stops here first
+#[cfg(target_os = "macos")]
+compile_error!("Reo Launcher does not support macOS. It builds for Windows and Linux.");
+
 pub mod consent;
 pub mod constants;
 pub mod domain;

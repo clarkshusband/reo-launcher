@@ -1371,11 +1371,7 @@ impl Component for SqlConsole {
                     )
                     .child(
                         label()
-                            .text(if cfg!(target_os = "macos") {
-                                "⌘ Enter"
-                            } else {
-                                "Ctrl+Enter"
-                            })
+                            .text("Ctrl+Enter")
                             .font_size(12.)
                             .color(colors::fg_secondary()),
                     ),

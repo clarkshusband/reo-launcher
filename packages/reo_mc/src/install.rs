@@ -360,18 +360,10 @@ fn natives_classifier(lib: &Library) -> Option<&str> {
         .filter(|classifier| classifier.starts_with("natives-"))
 }
 
-/// Pre-LWJGL3 macOS natives jars ship `.jnilib` so a single suffix would read
-/// an intact extraction as empty and repair it on every check
-const NATIVE_SUFFIXES: &[&str] = if cfg!(windows) {
-    &[".dll"]
-} else if cfg!(target_os = "macos") {
-    &[".dylib", ".jnilib"]
-} else {
-    &[".so"]
-};
+const NATIVE_SUFFIX: &str = if cfg!(windows) { ".dll" } else { ".so" };
 
 fn is_native_file(name: &str) -> bool {
-    NATIVE_SUFFIXES.iter().any(|suffix| name.ends_with(suffix))
+    name.ends_with(NATIVE_SUFFIX)
 }
 
 fn carries_natives(lib: &Library, java_arch: &str) -> bool {

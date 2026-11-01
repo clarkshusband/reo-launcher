@@ -10,9 +10,6 @@ const ALLOWED_URL_SCHEMES: [&str; 3] = ["http", "https", "mailto"];
 
 pub fn focus_window() {
     Platform::get().with_window(Platform::window_id(), |win| {
-        #[cfg(target_os = "macos")]
-        macos::set_menu_bar_only(false);
-
         win.set_visible(true);
         win.set_minimized(false);
         win.focus_window();
@@ -21,16 +18,7 @@ pub fn focus_window() {
 
 pub fn hide_window() {
     Platform::get().with_window(Platform::window_id(), |win| {
-        #[cfg(target_os = "macos")]
-        if !tray::is_active() {
-            win.set_minimized(true);
-            return;
-        }
-
         win.set_visible(false);
-
-        #[cfg(target_os = "macos")]
-        macos::set_menu_bar_only(true);
     });
 }
 
@@ -167,7 +155,6 @@ pub fn copy_image_to_clipboard(path: std::path::PathBuf) {
 
 pub mod tray {
     use std::cell::RefCell;
-    use std::sync::atomic::{AtomicBool, Ordering};
 
     use freya::prelude::{LaunchConfig, RendererContext};
     use freya::tray::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -182,20 +169,10 @@ pub mod tray {
     const LOGS_ID: &str = "oneclient.logs";
     const QUIT_ID: &str = "oneclient.quit";
 
-    #[cfg(target_os = "macos")]
-    const ICON: &[u8] = include_bytes!("../icons/tray.png");
-    #[cfg(not(target_os = "macos"))]
     const ICON: &[u8] = include_bytes!("../icons/64x64.png");
-
-    static ACTIVE: AtomicBool = AtomicBool::new(false);
 
     thread_local! {
         static GAME_ITEMS: RefCell<Vec<MenuItem>> = const { RefCell::new(Vec::new()) };
-    }
-
-    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-    pub(super) fn is_active() -> bool {
-        ACTIVE.load(Ordering::Relaxed)
     }
 
     pub(super) fn set_game_running(running: bool) {
@@ -240,7 +217,6 @@ pub mod tray {
         let mut builder = TrayIconBuilder::new()
             .with_tooltip(constants::WINDOW_TITLE)
             .with_icon(LaunchConfig::tray_icon(ICON))
-            .with_icon_as_template(cfg!(target_os = "macos"))
             .with_menu_on_left_click(!cfg!(target_os = "windows"));
 
         match menu {
@@ -254,10 +230,7 @@ pub mod tray {
         }
 
         match builder.build() {
-            Ok(icon) => {
-                ACTIVE.store(true, Ordering::Relaxed);
-                icon
-            }
+            Ok(icon) => icon,
             Err(err) => {
                 tracing::error!("failed to create the tray icon, carrying on without one: {err}");
                 GAME_ITEMS.with_borrow_mut(|items| items.clear());
@@ -308,65 +281,5 @@ pub mod tray {
                 ipc::send(IpcCommand::Launch(cluster.folder_name));
             }
         });
-    }
-}
-
-#[cfg(target_os = "macos")]
-pub mod macos {
-    use std::time::Duration;
-
-    pub fn loop_memory_collector() {
-        tokio::spawn(async {
-            tokio::time::sleep(Duration::from_secs(8)).await;
-
-            loop {
-                release_unused_memory();
-                tokio::time::sleep(Duration::from_secs(60)).await;
-            }
-        });
-    }
-
-    fn release_unused_memory() {
-        unsafe {
-            unsafe extern "C" {
-                fn malloc_zone_pressure_relief(zone: *mut core::ffi::c_void, goal: usize) -> usize;
-            }
-            malloc_zone_pressure_relief(core::ptr::null_mut(), 0);
-        }
-    }
-
-    pub fn set_menu_bar_only(menu_bar_only: bool) {
-        const REGULAR: isize = 0;
-        const ACCESSORY: isize = 1;
-
-        type Id = *mut core::ffi::c_void;
-
-        unsafe {
-            unsafe extern "C" {
-                fn objc_getClass(name: *const core::ffi::c_char) -> Id;
-                fn sel_registerName(name: *const core::ffi::c_char) -> Id;
-                fn objc_msgSend();
-            }
-
-            let class = objc_getClass(c"NSApplication".as_ptr());
-            if class.is_null() {
-                return;
-            }
-
-            let send: unsafe extern "C" fn() = objc_msgSend;
-            let shared: unsafe extern "C" fn(Id, Id) -> Id = core::mem::transmute(send);
-            let app = shared(class, sel_registerName(c"sharedApplication".as_ptr()));
-            if app.is_null() {
-                return;
-            }
-
-            let set_policy: unsafe extern "C" fn(Id, Id, isize) -> bool =
-                core::mem::transmute(send);
-            set_policy(
-                app,
-                sel_registerName(c"setActivationPolicy:".as_ptr()),
-                if menu_bar_only { ACCESSORY } else { REGULAR },
-            );
-        }
     }
 }

@@ -1,16 +1,12 @@
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(unix)]
 mod linux;
-#[cfg(target_os = "macos")]
-mod macos;
 #[cfg(windows)]
 mod registry;
 #[cfg(windows)]
 mod windows;
 
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(unix)]
 use linux as imp;
-#[cfg(target_os = "macos")]
-use macos as imp;
 #[cfg(windows)]
 use windows as imp;
 

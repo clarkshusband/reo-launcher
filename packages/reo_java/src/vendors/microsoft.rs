@@ -195,7 +195,6 @@ const MICROSOFT_ARCH: Option<&str> = match HostTarget::CURRENT.arch {
 /// `linux-musl`
 const MICROSOFT_OS: &str = match HostTarget::CURRENT.os {
     HostOs::Windows => "windows",
-    HostOs::MacOs => "macos",
     HostOs::Linux { musl: true } => "alpine",
     HostOs::Linux { musl: false } => "linux",
 };

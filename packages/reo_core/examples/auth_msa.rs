@@ -35,8 +35,6 @@ async fn main() -> LauncherResult<()> {
 fn try_open_browser(url: &str) {
     let result = if cfg!(target_os = "windows") {
         Command::new("cmd").args(["/C", "start", "", url]).spawn()
-    } else if cfg!(target_os = "macos") {
-        Command::new("open").arg(url).spawn()
     } else {
         Command::new("xdg-open").arg(url).spawn()
     };
