@@ -1149,7 +1149,7 @@ mod tests {
     }
 
     #[test]
-    fn an_osx_ruled_loader_flag_reaches_the_jvm_only_on_macos() {
+    fn an_osx_ruled_loader_flag_never_reaches_the_jvm() {
         let loader_jvm: Vec<interfrost::api::minecraft::Argument> = serde_json::from_str(
             r#"["-Dfabric.fixPackageAccess=true", "-Dfabric.gameVersion=1.8.9",
                 {"rules": [{"action": "allow", "os": {"name": "osx"}}], "value": "-XstartOnFirstThread"}]"#,
@@ -1170,10 +1170,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            args.contains(&"-XstartOnFirstThread".to_string()),
-            cfg!(target_os = "macos")
-        );
+        assert!(!args.contains(&"-XstartOnFirstThread".to_string()));
     }
 
     #[test]

@@ -110,7 +110,6 @@ const CORRETTO_ARCH: &str = match HostTarget::CURRENT.arch {
 /// Corretto publishes no separate musl build so Alpine gets the glibc one
 const CORRETTO_OS: &str = match HostTarget::CURRENT.os {
     HostOs::Windows => "windows",
-    HostOs::MacOs => "macos",
     HostOs::Linux { .. } => "linux",
 };
 

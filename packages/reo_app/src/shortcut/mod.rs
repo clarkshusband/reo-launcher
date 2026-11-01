@@ -1,14 +1,10 @@
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(unix)]
 mod linux;
-#[cfg(target_os = "macos")]
-mod macos;
 #[cfg(windows)]
 mod windows;
 
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(unix)]
 use linux as imp;
-#[cfg(target_os = "macos")]
-use macos as imp;
 #[cfg(windows)]
 use windows as imp;
 
@@ -58,7 +54,7 @@ pub fn default_dir() -> Option<PathBuf> {
 }
 
 pub fn launcher_exe() -> Result<PathBuf> {
-    #[cfg(all(unix, not(target_os = "macos")))]
+    #[cfg(unix)]
     if let Some(appimage) = std::env::var_os("APPIMAGE") {
         let path = PathBuf::from(appimage);
         if path.is_file() {

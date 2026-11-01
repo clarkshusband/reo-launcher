@@ -10,11 +10,11 @@ A Minecraft: Java Edition launcher with packaged, pre-configured mods in one cli
 
 You can install the latest release from our [GitHub releases](https://github.com/drako1k/reo-launcher/releases/latest).
 
-| Windows (x86_64) | macOS (Intel & Apple Silicon) | Linux (x86_64) |
-|------------------|-------------------------------|----------------|
-| Installer 🔄      | DMG 🔄                        | AppImage 🔄     |
-|                  | App Bundle 🔄                 | DEB            |
-|                  |                               | RPM            |
+| Windows (x86_64) | Linux (x86_64) |
+|------------------|----------------|
+| Installer 🔄      | AppImage 🔄     |
+|                  | DEB            |
+|                  | RPM            |
 
 > 🔄 = Has support for autoupdating built-in
 
@@ -52,7 +52,7 @@ cargo install cargo-packager --locked
 # Build the binary, then bundle it for the current OS:
 cargo build --release -p reo_app
 cargo packager --release -p reo_app --formats <targets>
-#   Windows: nsis      macOS: app,dmg      Linux: deb,appimage
+#   Windows: nsis      Linux: deb,appimage
 ```
 
 

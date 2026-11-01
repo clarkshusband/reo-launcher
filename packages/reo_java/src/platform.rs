@@ -1,5 +1,5 @@
 //! Host detection is shared here but the *naming* stays per-vendor
-//! each API spells the same platform differently (e.g. Adoptium `mac`/`alpine-linux`/`x32`)
+//! each API spells the same platform differently (e.g. Adoptium `alpine-linux`/`x32`)
 
 use crate::data::PackageArchive;
 
@@ -56,7 +56,6 @@ pub(crate) fn foreign_os_arch() -> &'static str {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostOs {
     Windows,
-    MacOs,
     /// Several vendors publish musl builds under a separate name
     Linux {
         musl: bool,
@@ -79,7 +78,6 @@ impl HostTarget {
         },
         os: cfg_select! {
             target_os = "windows" => HostOs::Windows,
-            target_os = "macos" => HostOs::MacOs,
             target_os = "linux" => cfg_select! {
                 target_env = "musl" => HostOs::Linux { musl: true },
                 _ => HostOs::Linux { musl: false },

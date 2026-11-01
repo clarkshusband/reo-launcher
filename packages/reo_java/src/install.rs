@@ -82,8 +82,7 @@ pub async fn install_package(
     // executor for the same reason the extraction above does
     let executable = {
         let extract_root = extract_root.clone();
-        let package = package.clone();
-        tokio::task::spawn_blocking(move || resolve_installed_executable(&extract_root, &package))
+        tokio::task::spawn_blocking(move || resolve_installed_executable(&extract_root))
             .await
             .map_err(|err| polyio::IOError::from(std::io::Error::other(err)))?
     };
@@ -196,7 +195,7 @@ pub async fn remove_installed_package(executable: &Path) -> JavaResult<bool> {
 }
 
 #[tracing::instrument(level = "debug")]
-fn resolve_installed_executable(extract_root: &Path, package: &JavaPackage) -> PathBuf {
+fn resolve_installed_executable(extract_root: &Path) -> PathBuf {
     let mut base_path = extract_root.to_path_buf();
 
     if let Ok(entries) = std::fs::read_dir(extract_root) {
@@ -211,43 +210,11 @@ fn resolve_installed_executable(extract_root: &Path, package: &JavaPackage) -> P
         }
     }
 
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = package;
-        let subfolder_exec = base_path.join(java_executable_relative_path());
-        if subfolder_exec.exists() {
-            subfolder_exec
-        } else {
-            extract_root.join(java_executable_relative_path())
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        use crate::vendors::JavaVendor;
-
-        if !base_path.join("Contents").join("Home").exists()
-            && let Ok(entries) = std::fs::read_dir(&base_path)
-            && let Some(dir) = entries.flatten().find(|entry| {
-                let file_name = entry.file_name();
-                let name = file_name.to_string_lossy();
-                (name.ends_with(".jre") || name.ends_with(".jdk") || name.contains("zulu"))
-                    && entry.path().join("Contents").join("Home").exists()
-            })
-        {
-            base_path = dir.path();
-        }
-
-        if package.vendor == JavaVendor::Zulu
-            && let Some(major) = package.java_version.first()
-        {
-            let zulu_bundle = base_path.join(format!("zulu-{major}.jre"));
-            if zulu_bundle.join("Contents").join("Home").exists() {
-                base_path = zulu_bundle;
-            }
-        }
-
-        base_path.join(java_executable_relative_path())
+    let subfolder_exec = base_path.join(java_executable_relative_path());
+    if subfolder_exec.exists() {
+        subfolder_exec
+    } else {
+        extract_root.join(java_executable_relative_path())
     }
 }
 

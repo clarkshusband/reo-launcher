@@ -34,17 +34,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            os_key: darwin
-            arch: aarch64
-            formats: app,dmg
-          - platform: macos-latest
-            target: x86_64-apple-darwin
-            os_key: darwin
-            arch: x86_64
-            formats: app,dmg
-            macos_deployment_target: '10.14'
           - platform: ubuntu-22.04
             target: ''
             os_key: linux
@@ -59,11 +48,6 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - name: (macOS) Pin deployment target
-        if: matrix.macos_deployment_target != ''
-        shell: bash
-        run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deployment_target }}" >> "$GITHUB_ENV"
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -102,37 +86,6 @@ jobs:
           else
             cargo build --release --bin reo_app
           fi
-
-      - name: (macOS) Verify deployment target
-        if: matrix.macos_deployment_target != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-          bin="target/${{ matrix.target }}/release/reo_app"
-          minos="$(vtool -show-build "$bin" | awk '/minos/ {print $2; exit}')"
-          echo "linked minos=$minos, declared minimum=${{ matrix.macos_deployment_target }}"
-          if [ "$(printf '%s\n%s\n' "$minos" "${{ matrix.macos_deployment_target }}" | sort -V | tail -n1)" != "${{ matrix.macos_deployment_target }}" ]; then
-            echo "::error::Binary requires macOS $minos but the bundle advertises ${{ matrix.macos_deployment_target }}."
-            exit 1
-          fi
-
-      - name: (macOS) Compile app icon catalog
-        if: startsWith(matrix.platform, 'macos')
-        shell: bash
-        run: |
-          set -euo pipefail
-          out="packages/reo_app/icons/generated"
-          mkdir -p "$out"
-          # --app-icon must match the .icon file name and CFBundleIconName in distribution/Info.plist
-          xcrun actool "packages/reo_app/icons/Reo.icon" \
-            --compile "$out" \
-            --app-icon "Reo" \
-            --output-partial-info-plist "$out/partial.plist" \
-            --platform macosx \
-            --minimum-deployment-target 26.0 \
-            --errors --warnings --notices
-          rm -f "$out/Reo.icns"
-          test -f "$out/Assets.car" || { echo "::error::actool produced no Assets.car"; exit 1; }
 
       - name: (Windows) Stage app-local VC++ runtime
         if: matrix.platform == 'windows-latest'
@@ -223,7 +176,7 @@ jobs:
           }
           Write-Host "OK: $($(Get-ChildItem 'target/crt/*.dll').Count) CRT DLLs sit beside reo_app.exe"
 
-      # Upload debug info (dSYM / .dwp / .pdb produced by the release profile's
+      # Upload debug info (.dwp / .pdb produced by the release profile's
       # split-debuginfo) to Sentry so nightly crash reports get real file/function/
       # line stack traces instead of raw addresses. Runs on every main push, so
       # each unique build's symbols land in Sentry (matched by debug-id). Skips
@@ -247,7 +200,7 @@ jobs:
           SYMS="$(mktemp -d)"
           shopt -s nullglob
           for f in "$OUT_DIR"/reo_app "$OUT_DIR"/reo_app.exe \
-                   "$OUT_DIR"/reo_app.pdb "$OUT_DIR"/*.dwp "$OUT_DIR"/*.dSYM; do
+                   "$OUT_DIR"/reo_app.pdb "$OUT_DIR"/*.dwp; do
             [ -e "$f" ] || continue
             cp -R "$f" "$SYMS/"
           done
@@ -262,8 +215,7 @@ jobs:
           mkdir -p dist
           # Human-facing installers only; skip the .sig-paired updater bundles
           # (no updater manifest is produced for unsigned nightly builds).
-          for f in "${{ steps.outdir.outputs.dir }}"/*.dmg \
-                   "${{ steps.outdir.outputs.dir }}"/*.deb \
+          for f in "${{ steps.outdir.outputs.dir }}"/*.deb \
                    "${{ steps.outdir.outputs.dir }}"/*.rpm \
                    "${{ steps.outdir.outputs.dir }}"/*.AppImage; do
             [ -e "$f" ] || continue
@@ -284,15 +236,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           path: dist/reo_app-${{ matrix.os_key }}-${{ matrix.arch }}*
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: (macOS) Upload unsigned dmg
-        if: matrix.os_key == 'darwin'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          path: dist/*.dmg
           archive: false
           if-no-files-found: error
           retention-days: 14

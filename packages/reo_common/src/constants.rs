@@ -38,7 +38,6 @@ pub const SENTRY_DSN: &str = match option_env!("REOCLIENT_SENTRY_DSN") {
 
 pub const TARGET_OS: &str = cfg_select! {
     target_os = "windows" => "windows",
-    target_os = "macos" => "osx",
     target_os = "linux" => "linux"
 };
 

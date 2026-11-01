@@ -134,17 +134,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            os_key: darwin
-            arch: aarch64
-            formats: app,dmg
-          - platform: macos-latest
-            target: x86_64-apple-darwin
-            os_key: darwin
-            arch: x86_64
-            formats: app,dmg
-            macos_deployment_target: '10.14'
           - platform: ubuntu-22.04
             target: ''
             os_key: linux
@@ -159,21 +148,15 @@ jobs:
     runs-on: ${{ matrix.platform }}
     env:
       # Code signing is optional: each signing step only runs when its secrets are
-      # set, so a release still builds without a SignPath or Apple developer account
-      # (the installers are then unsigned and the OS warns when opening them).
+      # set, so a release still builds without a SignPath account (the Windows
+      # installer is then unsigned and SmartScreen warns when opening it).
       SIGNPATH_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' && secrets.SIGNPATH_ORGANIZATION_ID != '' }}
-      APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE != '' }}
     steps:
       # Pin to the commit `prepare` resolved - after a release that is the version
       # commit it just pushed, which github.sha would not point at.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ needs.prepare.outputs.sha }}
-
-      - name: (macOS) Pin deployment target
-        if: matrix.macos_deployment_target != ''
-        shell: bash
-        run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deployment_target }}" >> "$GITHUB_ENV"
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -200,46 +183,6 @@ jobs:
           tool: cargo-packager
           version: 0.11.8
 
-      - name: (macOS) Note unsigned build
-        if: startsWith(matrix.platform, 'macos') && env.APPLE_SIGNING_ENABLED != 'true'
-        run: echo "::warning::APPLE_CERTIFICATE is not set; the macOS app is not signed or notarized and Gatekeeper will ask users to allow it in Privacy & Security."
-
-      - name: Import Apple Developer certificate
-        if: startsWith(matrix.platform, 'macos') && env.APPLE_SIGNING_ENABLED == 'true'
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security set-keychain-settings -t 3600 -u build.keychain
-          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          CERT_ID=$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')
-          if [ -z "$CERT_ID" ]; then
-            echo "::error::No Developer ID Application certificate found in keychain."
-            exit 1
-          fi
-          echo "APPLE_SIGNING_IDENTITY=$CERT_ID" >> "$GITHUB_ENV"
-          # cargo-packager only codesigns when `signing-identity` is present in the
-          # packager config; it does NOT read APPLE_SIGNING_IDENTITY. Inject it into
-          # the macOS metadata so signing + notarization actually run.
-          CERT_ID="$CERT_ID" python3 - <<'PY'
-          import os, re
-          p = "packages/reo_app/Cargo.toml"
-          s = open(p).read()
-          ident = os.environ["CERT_ID"]
-          hdr = "[package.metadata.packager.macos]"
-          assert hdr in s, "macos packager section not found"
-          if "signing-identity" not in s:
-              s = s.replace(hdr, f'{hdr}\nsigning-identity = "{ident}"', 1)
-              open(p, "w").write(s)
-          print(f"signing-identity set to: {ident}")
-          PY
-
       - name: Build release binary
         shell: bash
         run: |
@@ -247,19 +190,6 @@ jobs:
             cargo build --release --bin reo_app --target ${{ matrix.target }}
           else
             cargo build --release --bin reo_app
-          fi
-
-      - name: (macOS) Verify deployment target
-        if: matrix.macos_deployment_target != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-          bin="target/${{ matrix.target }}/release/reo_app"
-          minos="$(vtool -show-build "$bin" | awk '/minos/ {print $2; exit}')"
-          echo "linked minos=$minos, declared minimum=${{ matrix.macos_deployment_target }}"
-          if [ "$(printf '%s\n%s\n' "$minos" "${{ matrix.macos_deployment_target }}" | sort -V | tail -n1)" != "${{ matrix.macos_deployment_target }}" ]; then
-            echo "::error::Binary requires macOS $minos but the bundle advertises ${{ matrix.macos_deployment_target }}."
-            exit 1
           fi
 
       - name: (Windows) Note unsigned build
@@ -316,24 +246,6 @@ jobs:
             exit 1
           }
 
-      - name: (macOS) Compile app icon catalog
-        if: startsWith(matrix.platform, 'macos')
-        shell: bash
-        run: |
-          set -euo pipefail
-          out="packages/reo_app/icons/generated"
-          mkdir -p "$out"
-          # --app-icon must match the .icon file name and CFBundleIconName in distribution/Info.plist
-          xcrun actool "packages/reo_app/icons/Reo.icon" \
-            --compile "$out" \
-            --app-icon "Reo" \
-            --output-partial-info-plist "$out/partial.plist" \
-            --platform macosx \
-            --minimum-deployment-target 26.0 \
-            --errors --warnings --notices
-          rm -f "$out/Reo.icns"
-          test -f "$out/Assets.car" || { echo "::error::actool produced no Assets.car"; exit 1; }
-
       - name: (Windows) Stage app-local VC++ runtime
         if: matrix.platform == 'windows-latest'
         shell: bash
@@ -361,10 +273,7 @@ jobs:
       - name: Package
         shell: bash
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CI: ${{ startsWith(matrix.platform, 'macos') && 'false' || 'true' }}
+          CI: 'true'
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
         run: |
@@ -372,10 +281,6 @@ jobs:
           if [ -z "${CARGO_PACKAGER_SIGN_PRIVATE_KEY:-}" ] || [ -z "${CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD:-}" ]; then
             echo "::error::CARGO_PACKAGER_SIGN_PRIVATE_KEY and CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD secrets are required to sign updates."
             exit 1
-          fi
-          # Notarization needs all three, so empty values are dropped rather than tried
-          if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_PASSWORD:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
-            unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
           fi
           ARGS="--release --formats ${{ matrix.formats }}"
           if [ -n "${{ matrix.target }}" ]; then
@@ -410,7 +315,7 @@ jobs:
           cargo generate-rpm -p packages/reo_app
           cp target/generate-rpm/*.rpm "${{ steps.outdir.outputs.dir }}/"
 
-      # Upload debug info (dSYM / .dwp / .pdb produced by the release profile's
+      # Upload debug info (.dwp / .pdb produced by the release profile's
       # split-debuginfo) to Sentry so crash reports get real file/function/line
       # stack traces instead of raw addresses. Skips silently unless the repo has
       # a SENTRY_AUTH_TOKEN secret plus SENTRY_ORG / SENTRY_PROJECT variables.
@@ -432,7 +337,7 @@ jobs:
           SYMS="$(mktemp -d)"
           shopt -s nullglob
           for f in "$OUT_DIR"/reo_app "$OUT_DIR"/reo_app.exe \
-                   "$OUT_DIR"/reo_app.pdb "$OUT_DIR"/*.dwp "$OUT_DIR"/*.dSYM; do
+                   "$OUT_DIR"/reo_app.pdb "$OUT_DIR"/*.dwp; do
             [ -e "$f" ] || continue
             cp -R "$f" "$SYMS/"
           done
@@ -525,14 +430,13 @@ jobs:
           shopt -s nullglob
 
           # Identify the single updater artifact for this platform (the file with a
-          # sibling .sig): -setup.exe (nsis), *.app.tar.gz (app), *.AppImage (appimage).
+          # sibling .sig): -setup.exe (nsis), *.AppImage (appimage).
           # NOTE: nullglob is on, so an unmatched glob expands to nothing. Use arrays
           # rather than `ls <glob> | head` - the latter falls back to listing the cwd
           # when nothing matches, silently picking an unrelated file.
           fmt=""; ext=""; matches=()
           case "$OS_KEY" in
             windows) matches=("$OUT_DIR"/*-setup.exe); fmt="nsis"; ext="exe" ;;
-            darwin)  matches=("$OUT_DIR"/*.app.tar.gz); fmt="app"; ext="app.tar.gz" ;;
             linux)   matches=("$OUT_DIR"/*.AppImage); fmt="appimage"; ext="AppImage" ;;
           esac
           updater_file="${matches[0]:-}"
@@ -541,9 +445,9 @@ jobs:
             exit 1
           fi
 
-          # The updater bundle isn't always arch-tagged by cargo-packager, so the two
-          # macOS legs would collide on the release. Rename the updater artifact + its .sig
-          # to an arch-unique name before upload, and point the manifest at that name.
+          # The updater bundle isn't always arch-tagged by cargo-packager. Rename the
+          # updater artifact + its .sig to an arch-unique name before upload, and point
+          # the manifest at that name.
           unique="ReoLauncher_${VERSION}_${OS_KEY}_${ARCH}.${ext}"
           cp "$updater_file" "$OUT_DIR/$unique"
           cp "$updater_file.sig" "$OUT_DIR/$unique.sig"
@@ -567,19 +471,16 @@ jobs:
             cp "${rpm_matches[0]}" "$OUT_DIR/$rpm_unique"
           fi
 
-          # Upload human-facing installers (dmg/renamed deb/renamed rpm/AppImage/signed exe) +
+          # Upload human-facing installers (renamed deb/renamed rpm/AppImage/signed exe) +
           # the renamed updater bundle and its .sig. Skip the un-renamed updater bundle to avoid clashes.
-          for f in "$OUT_DIR"/*.dmg ${deb_unique:+"$OUT_DIR/$deb_unique"} ${rpm_unique:+"$OUT_DIR/$rpm_unique"} "$OUT_DIR"/*.AppImage "$OUT_DIR"/*-setup.exe "$OUT_DIR/$unique" "$OUT_DIR/$unique.sig"; do
+          for f in ${deb_unique:+"$OUT_DIR/$deb_unique"} ${rpm_unique:+"$OUT_DIR/$rpm_unique"} "$OUT_DIR"/*.AppImage "$OUT_DIR"/*-setup.exe "$OUT_DIR/$unique" "$OUT_DIR/$unique.sig"; do
             [ -e "$f" ] || continue
             gh release upload "$TAG" "$f" --clobber
           done
 
           base="$unique"
           mkdir -p fragments
-          case "$OS_KEY" in
-            darwin) KEYS="darwin-${ARCH} macos-${ARCH}" ;;
-            *)      KEYS="${OS_KEY}-${ARCH}" ;;
-          esac
+          KEYS="${OS_KEY}-${ARCH}"
           SIG="$(cat "$updater_file.sig")" \
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${base}" \
           FMT="$fmt" \

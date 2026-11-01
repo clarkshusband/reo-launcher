@@ -187,48 +187,6 @@ fn internal_locate_java() -> Vec<PathBuf> {
     java_homes
 }
 
-#[cfg(target_os = "macos")]
-#[tracing::instrument(level = "debug")]
-fn internal_locate_java() -> Vec<PathBuf> {
-    let mut found = Vec::new();
-
-    let macos_paths = {
-        let mut paths = vec![
-            PathBuf::from("/Library/Java/JavaVirtualMachines"),
-            PathBuf::from("/System/Library/Java/JavaVirtualMachines"),
-            PathBuf::from("/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands"),
-            PathBuf::from("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home"),
-            PathBuf::from("/opt/homebrew/Cellar"),
-            PathBuf::from("/opt/homebrew/opt"),
-            PathBuf::from("/usr/local/Cellar"),
-            PathBuf::from("/usr/local/opt"),
-        ];
-        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
-            paths.push(
-                home.join("Library")
-                    .join("Java")
-                    .join("JavaVirtualMachines"),
-            );
-            paths.push(home.join(".jdks"));
-            paths.push(home.join(".sdkman").join("candidates").join("java"));
-        }
-        paths
-    };
-
-    for path in macos_paths {
-        if let Ok(children) = std::fs::read_dir(path) {
-            for child in children.flatten() {
-                let java_exe = child.path().join(java_executable_relative_path());
-                if java_exe.exists() {
-                    found.push(java_exe);
-                }
-            }
-        }
-    }
-
-    find_java_in_path(found)
-}
-
 #[cfg(target_os = "linux")]
 #[tracing::instrument(level = "debug")]
 fn internal_locate_java() -> Vec<PathBuf> {

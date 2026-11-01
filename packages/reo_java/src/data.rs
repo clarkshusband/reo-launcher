@@ -68,12 +68,5 @@ impl PackageArchive {
 }
 
 pub fn java_executable_relative_path() -> PathBuf {
-    #[cfg(target_os = "macos")]
-    {
-        PathBuf::from("Contents/Home/bin").join(reo_common::constants::JAVA_BIN)
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        PathBuf::from("bin").join(reo_common::constants::JAVA_BIN)
-    }
+    PathBuf::from("bin").join(reo_common::constants::JAVA_BIN)
 }

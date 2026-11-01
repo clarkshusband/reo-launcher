@@ -48,7 +48,7 @@ body:
       label: Operating System information
       description: Information about your environment.
       placeholder: |
-        macOS 13.4.2, git 1.4.0, etc.
+        Windows 11 24H2, git 1.4.0, etc.
     validations:
       required: false
   - type: textarea
