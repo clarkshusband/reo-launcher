@@ -7,6 +7,7 @@ mod heal;
 mod launch;
 mod log_replay;
 pub(crate) mod natives;
+mod presence;
 mod process;
 mod reattach;
 mod session;

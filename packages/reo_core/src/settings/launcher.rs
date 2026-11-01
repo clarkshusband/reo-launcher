@@ -60,6 +60,10 @@ pub struct LauncherSettings {
     pub crash_reporting: bool,
     pub enable_gamemode: bool,
     pub discord_enabled: bool,
+    /// Lets Discord show the instance, version, loader and mod count while playing
+    pub discord_show_game_details: bool,
+    /// Lets Discord show what the launcher is on while no game runs
+    pub discord_show_launcher_activity: bool,
     pub max_concurrent_requests: usize,
     pub global_game_settings: GameSettingsProfile,
     pub allow_parallel_running_clusters: bool,
@@ -95,6 +99,13 @@ impl LauncherSettings {
     pub fn set_view_state(&mut self, key: impl Into<String>, state: ViewState) {
         self.view_states.insert(key.into(), state);
     }
+
+    pub fn discord_presence(&self) -> reo_discord::PresenceOptions {
+        reo_discord::PresenceOptions {
+            show_game_details: self.discord_show_game_details,
+            show_launcher_activity: self.discord_show_launcher_activity,
+        }
+    }
 }
 
 impl LauncherSettings {
@@ -117,6 +128,8 @@ impl Default for LauncherSettings {
             auto_update: true,
             crash_reporting: true,
             discord_enabled: true,
+            discord_show_game_details: true,
+            discord_show_launcher_activity: true,
             enable_gamemode: false,
             max_concurrent_requests: 25,
             global_game_settings: GameSettingsProfile::default_global_profile(),
