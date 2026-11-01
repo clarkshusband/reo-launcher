@@ -2,8 +2,9 @@ use super::*;
 
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use freya::router::RouterContext;
-use reo_content::packages::types::ProjectSummary;
+use reo_content::packages::types::{ProjectSummary, SideSupport};
 use reo_content::packages::{ContentType, ProviderId};
 use reo_core::clusters::ModpackSource;
 
@@ -262,9 +263,9 @@ impl Component for ListRow {
             .width(Size::fill())
             .height(Size::px(LIST_ROW_H))
             .cross_align(Alignment::Center)
-            .spacing(12.)
-            .padding(Gaps::new_all(16.))
-            .corner_radius(CornerRadius::new_all(8.))
+            .spacing(14.)
+            .padding(Gaps::new_all(14.))
+            .corner_radius(CornerRadius::new_all(12.))
             .background(colors::component_bg())
             .border(border_all_color(
                 1.,
@@ -281,50 +282,213 @@ impl Component for ListRow {
             .a11y_role(AccessibilityRole::Button)
             .cursor(CursorIcon::Pointer)
             .on_press(move |_| open_package(cluster_id, &package_type, provider, &id))
-            .child(Thumbnail::new(item.icon_url.clone(), 48.).radius(6.))
+            .child(Thumbnail::new(item.icon_url.clone(), LIST_ICON).radius(12.))
             .child(
                 rect()
                     .vertical()
                     .width(Size::flex(1.0))
-                    .spacing(3.)
+                    .spacing(5.)
                     .child(
                         rect()
                             .horizontal()
+                            .width(Size::fill())
                             .cross_align(Alignment::Center)
                             .spacing(6.)
                             .child(
                                 label()
                                     .text(item.name.clone())
-                                    .font_size(15.)
-                                    .font_weight(FontWeight::SEMI_BOLD)
+                                    .font_size(16.)
+                                    .font_weight(FontWeight::BOLD)
                                     .max_lines(1)
                                     .color(colors::fg_primary()),
                             )
                             .child(
                                 label()
                                     .text(format!("by {}", item.author))
-                                    .font_size(10.)
+                                    .font_size(12.)
                                     .max_lines(1)
-                                    .color(colors::fg_primary().with_a(140)),
+                                    .color(colors::fg_secondary()),
                             )
                             .child(Icon::new(item.provider).size(12.)),
                     )
                     .child(
                         label()
                             .text(item.summary.clone())
-                            .font_size(11.)
+                            .font_size(12.)
                             .max_lines(2)
                             .width(Size::fill())
                             .color(colors::fg_primary().with_a(184)),
-                    ),
+                    )
+                    .child(tag_chips(&item)),
             )
-            .child(downloads_row(item.downloads))
+            .child(row_stats(&item))
             .child(InstallButton::new(
                 &self.item,
                 self.cluster_id,
                 &self.package_type,
                 self.installed.clone(),
             ))
+    }
+}
+
+/// Chips a row has room for before the rest fold into "+N"
+const MAX_CHIPS: usize = 5;
+
+/// Where a project runs, worded the way Modrinth's own listings word it
+pub(super) fn environment_label(client: SideSupport, server: SideSupport) -> Option<&'static str> {
+    use SideSupport::{Optional, Required, Unsupported};
+    match (client, server) {
+        (Optional, Optional) => Some("Client or server"),
+        (Required, Required) => Some("Client and server"),
+        (Required | Optional, Unsupported) | (Required, Optional) => Some("Client"),
+        (Unsupported, Required | Optional) | (Optional, Required) => Some("Server"),
+        _ => None,
+    }
+}
+
+/// Modrinth's loader colours, so a chip reads as the loader it names
+fn loader_color(loader: GameLoader) -> Color {
+    match loader {
+        GameLoader::Fabric => Color::from_rgb(219, 182, 155),
+        GameLoader::Forge => Color::from_rgb(149, 158, 239),
+        GameLoader::NeoForge => Color::from_rgb(249, 158, 107),
+        GameLoader::Quilt => sidebar::QUILT_COLOR,
+        _ => colors::fg_secondary(),
+    }
+}
+
+fn tag_chips(item: &ProjectSummary) -> impl IntoElement {
+    let mut chips: Vec<Element> = Vec::new();
+    if let Some(environment) = environment_label(item.client_side, item.server_side) {
+        chips.push(chip(
+            Some(
+                Icon::new(IconType::Globe01)
+                    .size(11.)
+                    .color(colors::fg_secondary())
+                    .into_element(),
+            ),
+            environment.to_string(),
+            colors::fg_secondary(),
+        ));
+    }
+    for category in &item.categories {
+        chips.push(chip(
+            None,
+            sidebar::category_label(category),
+            colors::fg_secondary(),
+        ));
+    }
+    for loader in item.loaders.iter().filter(|l| l.is_modded()) {
+        chips.push(chip(
+            sidebar::loader_mark(*loader, 11.),
+            sidebar::loader_label(*loader).to_string(),
+            loader_color(*loader),
+        ));
+    }
+
+    let hidden = chips.len().saturating_sub(MAX_CHIPS);
+    chips.truncate(MAX_CHIPS);
+    if hidden > 0 {
+        chips.push(chip(None, format!("+{hidden}"), colors::fg_secondary()));
+    }
+
+    rect()
+        .horizontal()
+        .width(Size::fill())
+        .cross_align(Alignment::Center)
+        .spacing(6.)
+        .overflow(Overflow::Clip)
+        .children(chips)
+}
+
+fn chip(leading: Option<Element>, text: String, color: Color) -> Element {
+    rect()
+        .horizontal()
+        .height(Size::px(22.))
+        .cross_align(Alignment::Center)
+        .spacing(4.)
+        .padding(Gaps::new_symmetric(0., 8.))
+        .corner_radius(CornerRadius::new_all(999.))
+        .background(colors::ghost_overlay())
+        .border(border_all_color(1., colors::component_border()))
+        .maybe_child(leading)
+        .child(
+            label()
+                .text(text)
+                .font_size(11.)
+                .font_weight(FontWeight::MEDIUM)
+                .max_lines(1)
+                .color(color),
+        )
+        .into_element()
+}
+
+fn row_stats(item: &ProjectSummary) -> impl IntoElement {
+    rect()
+        .vertical()
+        .cross_align(Alignment::End)
+        .spacing(8.)
+        .child(
+            rect()
+                .horizontal()
+                .cross_align(Alignment::Center)
+                .spacing(12.)
+                .child(stat(
+                    IconType::Download01,
+                    abbreviate_number(item.downloads),
+                ))
+                .maybe_child(
+                    item.follows
+                        .map(|follows| stat(IconType::Heart, abbreviate_number(follows))),
+                ),
+        )
+        .child(stat(
+            IconType::ClockRewind,
+            updated_ago(item.updated, Utc::now()),
+        ))
+}
+
+fn stat(icon: IconType, text: String) -> Element {
+    rect()
+        .horizontal()
+        .cross_align(Alignment::Center)
+        .spacing(5.)
+        .child(Icon::new(icon).size(13.).color(colors::fg_secondary()))
+        .child(
+            label()
+                .text(text)
+                .font_size(12.)
+                .font_weight(FontWeight::MEDIUM)
+                .max_lines(1)
+                .color(colors::fg_secondary()),
+        )
+        .into_element()
+}
+
+pub(super) fn updated_ago(updated: DateTime<Utc>, now: DateTime<Utc>) -> String {
+    let minutes = (now - updated).num_minutes().max(0);
+    let hours = minutes / 60;
+    let days = hours / 24;
+    let plural = |n: i64, unit: &str| {
+        if n == 1 {
+            format!("1 {unit} ago")
+        } else {
+            format!("{n} {unit}s ago")
+        }
+    };
+
+    match days {
+        0 if minutes < 1 => "Just now".to_string(),
+        0 if hours < 1 => plural(minutes, "minute"),
+        0 => plural(hours, "hour"),
+        1 => "Yesterday".to_string(),
+        2..=6 => format!("{days} days ago"),
+        7..=13 => "Last week".to_string(),
+        14..=29 => format!("{} weeks ago", days / 7),
+        30..=59 => "Last month".to_string(),
+        60..=364 => format!("{} months ago", days / 30),
+        365..=729 => "Last year".to_string(),
+        _ => format!("{} years ago", days / 365),
     }
 }
 
@@ -506,24 +670,6 @@ impl Component for InstallButton {
     }
 }
 
-fn downloads_row(downloads: u64) -> impl IntoElement {
-    rect()
-        .horizontal()
-        .cross_align(Alignment::Center)
-        .spacing(4.)
-        .child(
-            Icon::new(IconType::Download01)
-                .size(12.)
-                .color(colors::fg_primary().with_a(140)),
-        )
-        .child(
-            label()
-                .text(abbreviate_number(downloads))
-                .font_size(11.)
-                .color(colors::fg_primary().with_a(140)),
-        )
-}
-
 pub(super) fn empty_state() -> impl IntoElement {
     rect()
         .width(Size::fill())
@@ -535,4 +681,58 @@ pub(super) fn empty_state() -> impl IntoElement {
                 .font_size(14.)
                 .color(colors::fg_secondary()),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeDelta;
+
+    use super::*;
+
+    #[test]
+    fn environment_reads_like_modrinths_listing() {
+        use SideSupport::{Optional, Required, Unknown, Unsupported};
+        assert_eq!(
+            environment_label(Optional, Optional),
+            Some("Client or server")
+        );
+        assert_eq!(
+            environment_label(Required, Required),
+            Some("Client and server")
+        );
+        assert_eq!(environment_label(Required, Unsupported), Some("Client"));
+        assert_eq!(environment_label(Required, Optional), Some("Client"));
+        assert_eq!(environment_label(Unsupported, Required), Some("Server"));
+        assert_eq!(environment_label(Optional, Required), Some("Server"));
+        assert_eq!(environment_label(Unsupported, Unsupported), None);
+        assert_eq!(
+            environment_label(Unknown, Unknown),
+            None,
+            "CurseForge reports no sides, so its rows get no chip"
+        );
+    }
+
+    #[test]
+    fn update_age_reads_in_the_largest_whole_unit() {
+        let now = Utc::now();
+        let ago = |delta: TimeDelta| updated_ago(now - delta, now);
+
+        assert_eq!(ago(TimeDelta::seconds(20)), "Just now");
+        assert_eq!(ago(TimeDelta::minutes(1)), "1 minute ago");
+        assert_eq!(ago(TimeDelta::minutes(45)), "45 minutes ago");
+        assert_eq!(ago(TimeDelta::hours(5)), "5 hours ago");
+        assert_eq!(ago(TimeDelta::days(1)), "Yesterday");
+        assert_eq!(ago(TimeDelta::days(3)), "3 days ago");
+        assert_eq!(ago(TimeDelta::days(9)), "Last week");
+        assert_eq!(ago(TimeDelta::days(16)), "2 weeks ago");
+        assert_eq!(ago(TimeDelta::days(40)), "Last month");
+        assert_eq!(ago(TimeDelta::days(213)), "7 months ago");
+        assert_eq!(ago(TimeDelta::days(400)), "Last year");
+        assert_eq!(ago(TimeDelta::days(1100)), "3 years ago");
+        assert_eq!(
+            updated_ago(now + TimeDelta::hours(2), now),
+            "Just now",
+            "a clock running ahead must not read as negative"
+        );
+    }
 }

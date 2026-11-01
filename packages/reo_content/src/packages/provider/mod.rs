@@ -8,8 +8,8 @@ pub use modrinth::ModrinthProvider;
 pub use registry::PackageProviderRegistry;
 
 use super::types::{
-    InstalledPackage, Page, ProjectDetail, ProjectSummary, SearchFilters, VersionDetail,
-    VersionLookup, VersionSummary,
+    CategoryTag, InstalledPackage, Page, ProjectDetail, ProjectSummary, SearchFilters,
+    VersionDetail, VersionLookup, VersionSummary,
 };
 use crate::ctx::ContentCtx;
 use crate::error::ContentResult;
@@ -87,7 +87,7 @@ pub trait PackageProvider: Send + Sync {
         &self,
         _content_type: reo_common::domain::ContentType,
         _ctx: &ContentCtx,
-    ) -> ContentResult<Vec<String>> {
+    ) -> ContentResult<Vec<CategoryTag>> {
         Ok(Vec::new())
     }
 }

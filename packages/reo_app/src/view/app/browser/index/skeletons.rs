@@ -86,7 +86,7 @@ impl Component for SkeletonListRow {
             .background(colors::component_bg())
             .border(border_all_color(1., colors::component_border()))
             .opacity(pulse)
-            .child(skeleton_block(Size::px(48.), 48.))
+            .child(skeleton_block(Size::px(LIST_ICON), LIST_ICON))
             .child(
                 rect()
                     .vertical()

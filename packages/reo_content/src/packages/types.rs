@@ -19,6 +19,38 @@ pub struct SearchFilters {
     pub loaders: Option<Vec<GameLoader>>,
     pub categories: Option<Vec<String>>,
     pub sort: Option<SearchSort>,
+    /// Every listed side has to be able to run the project. Only Modrinth can filter on this
+    pub sides: Option<Vec<GameSide>>,
+    /// Only Modrinth can filter on this
+    pub open_source: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum GameSide {
+    Client,
+    Server,
+}
+
+/// How much a project needs one side of the game, as Modrinth reports it
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SideSupport {
+    Required,
+    Optional,
+    Unsupported,
+    #[default]
+    #[serde(other)]
+    Unknown,
+}
+
+/// A category a provider lets searches filter by
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CategoryTag {
+    pub name: String,
+    /// The group Modrinth files the tag under, such as "categories", "features" or "resolutions"
+    pub header: String,
+    /// Inline SVG drawn in `currentColor`
+    pub icon_svg: Option<String>,
 }
 
 impl SearchFilters {
@@ -86,6 +118,16 @@ pub struct ProjectSummary {
     pub updated: DateTime<Utc>,
     pub loaders: Vec<GameLoader>,
     pub game_versions: Vec<String>,
+    /// None where the provider has no followers to count
+    #[serde(default)]
+    pub follows: Option<u64>,
+    /// Display categories, loaders left out
+    #[serde(default)]
+    pub categories: Vec<String>,
+    #[serde(default)]
+    pub client_side: SideSupport,
+    #[serde(default)]
+    pub server_side: SideSupport,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
